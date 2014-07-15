@@ -107,6 +107,8 @@ all: help
 
 help: 
 	@$(ECHO) books: generate BPi book using texlive.
+	@$(ECHO) gitpull: pull changes from master repo.
+	@$(ECHO) gitpush: push local changes to master repo.
 	@$(ECHO) help : this help message.
 	@$(ECHO) Runnning on: $(shell  $(SYSTYPE))
 
