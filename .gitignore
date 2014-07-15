@@ -1,0 +1,20 @@
+# Object file
+*.o
+
+# Ada Library Information
+*.ali
+
+# tex files
+*.ex 
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.aux 
+*.bbl 
+*.blg 
+*.code
