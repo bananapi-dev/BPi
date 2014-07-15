@@ -1,0 +1,375 @@
+pb(1)                                                                                                      pb(1)
+
+
+
+NAME
+       pb - Package build tool
+
+
+SYNOPSIS
+       pb [--check-sig] [-c|--config=<path>] [-s|--depot=<depot>] [-G|--dist=<dist>] [-d|--dist-ver=<ver>]
+          [-N|--dry-run] [-E|--egd-socket=<path>] [--gpg-keyring-path=<path>] [-h|--help]
+          [-b|--install-base=<path>] [-n|--install-path=<path>] [--keep-temp-files] [--local-depot=<depot>]
+          [--login=<login>] [--oldstyle-dependency] [--password=<pass>] [-f|--pkg-list=<path>]
+          [-t|--pkg-type=<type>] [--pkgdir=<path>] [--proxy-host=<host:port>] [--proxy-login=<host>]
+          [--proxy-password=<host>] [-q|--query=<string>] [--sftp-known-hosts-path=<path>] [--sftp-private-key-
+          path=<path>] [-1|--single-file] [--tmpbasedir=<path>] [-v|--verbose] [-V|--version] [<package> ...]
+
+
+DESCRIPTION
+       The  pb utility builds a package suitable for installation by the AIX lpp, HP-UX depot, IRIX inst, Redhat
+       RPM, Solaris pkgadd, and Tru64 UNIX setld package management systems. Input is via an XML-based  descrip‐
+       tion of the package.
+
+       Multiple packages can be built at once.
+
+       Package  names  are  usually specified as <name>-<ver>. However, this is dependent on the depot-db.xml(4)
+       file. <package> can also be a file in pb-db.xml(4) format or a zip archive containing the XML description
+       file named ``pb-db.xml'' or ``<package>-<ver>.pb'' and all files referenced by the description file.
+
+       pb  traverses the list of depots to find the package specified.  If <package> is a file, it is considered
+       to be in pb-db.xml(4) format.
+
+
+OPTIONS
+       --check-sig
+         Verify the GPG signature of the package. If pb does not find the ``gpg'' binary in the search path, in‐
+         stallation  will  fail.  Before  using this option, the public key used to the sign the package must be
+         present in your keyring. It is not necessary for the public key to be signed for signature verification
+         to work. However, it is suggested that you sign the public key.
+
+
+       -c, --config <path>
+         Alternate  path  to configuration file. The default path is ``/opt/TWWfsw/pbutils11/etc/pbutils.conf''.
+         The format of the configuration file is documented in pbutils.conf(4).
+
+
+       -s, --depot <depot>
+         Package depot to search for packages. The path to the depot, ``<depot>'' is either  a  directory  or  a
+         URL.  The  following  methods  are  supported:  ``file://'', ``ftp://'', ``http://'', ``https://'', and
+         ``sftp://''. Multiple package depots can be specified. The depot specified, <depot>, is  the  top-level
+         path  to the depot. Through the depot database file, ``depot-db.xml'', pb will descend into subdirecto‐
+         ries of the depot and search in these directories for additional packages. Any path with  the  packages
+         must  have the program database file, ``pb-db.xml'' or ``<program>.pb''. The format of the depot-db.xml
+         file is documented in depot-db.xml(4).  The format of the pb-db.xml file is documented in pb-db.xml(4).
+
+
+       -G, --dist <dist>
+         Distribution to package for. The default CD distribution is ``cd''. For custom builds, ``<dist>''  will
+         be the value assigned.
+
+
+       -d, --dist-ver <ver>
+         Distribution version to use when specifying a remote depot (http://) or a local repository that mirrors
+         a remote depot. The distribution version matches the release number for the packages  to  install.  The
+         special keyword ``latest'' can be used to specify the most recent distribution version.
+
+
+       -N, --dry-run
+         Indicate  what  actions  would be performed but do not execute the actions. This is useful to determine
+         what commands would be executed to build the package without building the package.
+
+
+       -E, --egd-socket <path>
+         Pathname to the socket the EGD/PRNGD daemons are listening on. This is needed only if the remote  depot
+         is being accessed through https and the platform does not have access to a /dev/random device.
+
+
+       --gpg-keyring-path <path>
+         Specifies  the location of the GPG keyring. The usual location of the keyring is ~/.gnupg. However, be‐
+         cause of http://www.securityportal.com/articles/advisory20010001.html, we encourage use of a  dedicated
+         directory for the keyring for pkg-inst. This option is required if --check-sig is given.
+
+
+       -h, --help
+         Displays short description of program options and then exits the program.
+
+
+       -b, --install-base <path>
+         Installation  base  directory.  Software is expected to be installed in a directory wholly owned by the
+         software program, ``[install base]/[install path]''. The installation prefix, combining  the  installa‐
+         tion base and installation path is available as ``${INSTALL_PREFIX}''.
+
+
+       -n, --install-path <path>
+         Installation  path containing the name of the program. Software is expected to be installed in a direc‐
+         tory wholly owned by the software program, ``[install base]/[install path]''. The installation path can
+         contain  multiple  directory  components and the variable ``${INSTALL_NAME}'' which is substituted with
+         the value of the ``<install-name>'' element. The installation prefix, combining the  installation  base
+         and installation path is available as ``${INSTALL_PREFIX}''.
+
+
+       --keep-temp-files
+         As  a  package is built, temporary files are created for use by the package management system to create
+         the packages. These files are removed after the package is built. With this option, these files are not
+         removed. Temporary files are created in the directory specified with --tmpbasedir or a system dependent
+         directory, usually ``/tmp'' or ``/var/tmp''.
+
+
+       --local-depot <depot>
+         Specifies the location to a remote repository to hold files retrieved when the depot is remote. pkg-in‐
+         st  will  create  a temporary working directory to unpack the archives downloaded into the local depot.
+         The files in the local depot are never removed. As a result, ``<depot>'' can be used later as  a  depot
+         for --depot.
+
+
+       --login <login>
+         Login  for  a remote repository requiring authentication. For the ``ftp://'' method, a default login id
+         of ``anonymous'' is used when no login id is specified. For the ``http://'' method, HTTP BASIC  authen‐
+         tication is assumed.
+
+
+       --oldstyle-dependency
+         Assume oldstyle dependencies.
+
+
+       --password <pass>
+         Password  for  a remote repository requiring authentication. For the ``http://'' method, HTTP BASIC au‐
+         thentication is assumed.
+
+
+       -f, --pkg-list <file>
+         Read <file> for a list of packages. This option can be specified multiple times.
+
+
+       --pkg-type = <type>
+         Package management system to build package for. Can be specified multiple times.
+
+
+       --pkgdir <path>
+         Directory to save packages to.
+
+
+       --proxy-host <host>
+         If a remote repository is specified, use ``<host>'' as the proxy server if a proxy is required to  con‐
+         nect to remote site.
+
+
+       --proxy-login <login>
+         Login  for  a  proxy server required to connect with a remote repository.  For the ``ftp://'' method, a
+         connection is initially made to the proxy host with the proxy login specified by ``<login>''. If a  lo‐
+         gin  to the remote repository is specified, the command ``USER <login>@<repository>'' is issued to con‐
+         nect to the remote repository from the proxy server. If a login to the remote repository is not  speci‐
+         fied,  the command ``USER anonymous@<repository>'' is issued. If a password to the remote repository is
+         specified, the command `PASS <password>'' is issued to complete the connection to the remote repository
+         from  the  proxy  server.  If  a password to the remote repository is not specified, the command ``PASS
+         anonymous'' is issued.  For the ``http://'' method, HTTP BASIC authentication is assumed.
+
+
+       --proxy-password <pass>
+         Password for a proxy server required to connect with a remote repository. For the  ``http://''  method,
+         HTTP BASIC authentication is assumed.
+
+
+       -q, --query <string>
+         Request information contained in the package description. The supported ``<string>'' values are:
+
+              changelog
+                  Print contents of <changelog> element.
+
+              init-scripts
+                  Print path to init script for package type(s) specified.
+
+              install-base
+                  Print installbase base.
+
+              installed
+                  Print program name(s) if installed. An exit code of 0 is return if all programs are installed.
+                  If at least one of the programs is not installed, an exit code of 1 is returned.
+
+              pbdb-path
+                  Print path to pb-db.xml(4) file.
+
+              pkgname-base
+                  Basename of the package, without the suffixes to denote  the  package  type  (``conf',  ``run‐
+                  time'', etc.).
+
+              procedure-scripts
+                  Print path to procedure script for package type(s) specified.
+
+              revision
+                  Print value of <revision> element for package type specified.
+
+              wrapper-scripts
+                  Print path to wrapper script for package type(s) specified.
+
+       --sftp-known-hosts-path <path>
+              Path to ssh ``ssh_known_hosts'' file. When using the ``sftp://'' protocol for remote repositories,
+              remote hosts are authenticated against the RSA/DSA host keys in this file. Because the sftp proto‐
+              col  implementation  is  done  using  the ``paramiko'' Python toolkit rather than interfacing with
+              sftp(1), the path to the ssh ``ssh_known_hosts'' file must be specified.
+
+
+       --sftp-private-key-path <path>
+              Path to ssh private key file for password-less access to remote repository. The private  key  must
+              be  created  without  a password as pb does not prompt for passwords. The corresponding public key
+              file must exist in the ``.ssh/authorized_keys'' file on the remote host for either the  user  run‐
+              ning pb or for the user specified with ``--login'' option.
+
+
+       -1, --single-file
+              If  supported  by  the  package  management  system, generate a file-representation of the package
+              rather than as a directory.  Relevant for HP-UX depot and Solaris pkgadd.
+
+
+       --tmpbasedir <path>
+              Path to the base directory for temporary files. By default, temporary files are created in  either
+              ``/tmp''  or  ``/var/tmp''. However, for some package management systems like AIX lpp, files for a
+              package must be copied into the temp directory. If the normal temporary  directory  is  not  large
+              enough to hold the files, specify an alternate directory with this variable.
+
+
+       -v, --verbose
+              Provide  more verbose diagnostics during program execution. Can be specified multiple times and is
+              additive.
+
+
+       -V, --version
+              Display version number of pkg-inst and exit.
+
+
+PREPROCESSING
+       Prior to reading the description file, the XML file is preprocessed by GPP, the Generic  Preprocessor  by
+       Denis  Auroux <auroux@math.polytechnique.fr>. This is done to allow one description file for various con‐
+       figurations.
+
+
+REPOSITORY
+       When pb is not given a pb-db.xml(4) file or ``.pb'' archive file as input, it traverses a list of  depots
+       (repositories) specified with the --depot option. Each repository path is expected to have either a ``de‐
+       pot-db.xml'' or ``pb-db.xml'' file. The ``depot-db.xml'' file, explained in depot-db.xml(4), allows pb to
+       recursively descend into subdirectories searching for a package. When depots are used, the leaves usually
+       contain ``pb-db.xml'' files for each package as follows:
+         src/depot-db.xml
+         src/openssh-3.6.1p1/
+         src/openssh-3.6.1p1/openssh-3.6.1p1.pb
+         src/openssh-3.6.1p1/openssh-3.6.1p1.pb-db
+         src/openssh-3.6.1p1/openssh-3.6.1p1.pb.md5
+         src/openssh-3.6.1p1/pb-db.xml
+         src/tetex-2.0.2/
+         src/tetex-2.0.2/tetex-2.0.2.pb
+         src/tetex-2.0.2/tetex-2.0.2.pb-db
+         src/tetex-2.0.2/tetex-2.0.2.pb.md5
+         src/tetex-2.0.2/pb-db.xml
+         src/xpm-3.4k/
+         src/xpm-3.4k/xpm-3.4k.pb
+         src/xpm-3.4k/xpm-3.4k.pb-db
+         src/xpm-3.4k/xpm-3.4k.pb.md5
+         src/xpm-3.4k/pb-db.xml
+
+       When not specifying a depot, individual ``pb-db.xml'' files or ``.pb'  archive  files  for  each  package
+       might be laid out as:
+         src/openssh-3.4p1.pb
+         src/python-2.2.1.pb
+         src/xpm-3.4k.pb
+
+
+EXAMPLES
+       On HP-UX, generating a single-file instance of the XPM 3.4k package:
+         $ pb -1 -s /opt xpm-3.4k
+         xpm-3.4k
+           searching for depot containing "depot" package ... found
+             depot: file:///opt
+           checking if program installed ... yes
+           installing helper files for postinstall scripts ... done
+           generating fileset information ... done
+           filesets ... man, runtime
+           building package ...
+             creating temp directory for package files ... /var/tmp/AAAa27305
+             creating link procedure script for man fileset ... done
+             creating link procedure script for runtime fileset ... done
+             creating postremove procedure script for man fileset ... done
+             creating postremove procedure script for runtime fileset ... done
+             creating product postremove script ... done
+             creating psf file ... done
+             creating package ...
+               $ /usr/sbin/swpackage -d /opt/dist/cd/TWWxpm.depot -s
+               /var/tmp/AAAa27305/psf -x create_target_acls=false -x
+               target_type=tape -x write_remote_files=true -x
+               reinstall_files=false -x reinstall_files_use_cksum=true -x
+               verbose=2 -x loglevel=0 -x loglevel=/dev/null
+
+       On Solaris, building Python 2.2.1 from an individual pb-db.xml file:
+         $ pb /tmp/python-2.2.1.pb
+         python-2.2.1
+           searching for depot containing "pkgadd" package ... found
+             depot: file:///tmp
+           checking if program installed ... yes
+           installing helper files for postinstall scripts ... done
+           generating fileset information ... done
+           filesets ... doc, man, packages, runtime
+           building package ...
+             creating temp directory for package files ... /var/tmp/AAA2oaakl
+             creating compver file for runtime fileset ... done
+             creating link procedure script for man fileset ... done
+             creating link procedure script for packages fileset ... done
+             creating link procedure script for runtime fileset ... done
+             creating dependency file for runtime fileset ... done
+             creating pkginfo file for doc fileset ... done
+             creating pkginfo file for packages fileset ... done
+             creating pkginfo file for runtime fileset ... done
+             creating pkginfo file for man fileset ... done
+             creating prototype file for doc fileset ... done
+             creating prototype file for packages fileset ... done
+             creating prototype file for runtime fileset ... done
+             creating prototype file for man fileset ... done
+             creating package for doc fileset ...
+               $ /usr/bin/pkgmk -b /opt/TWWfsw -d /opt/dist/cd -f
+               /var/tmp/AAAaxay6m/doc-prototype -o
+             creating package for packages fileset ...
+               $ /usr/bin/pkgmk -b /opt/TWWfsw -d /opt/dist/cd -f
+               /var/tmp/AAAaxay6m/packages-prototype -o
+             creating package for runtime fileset ...
+               $ /usr/bin/pkgmk -b /opt/TWWfsw -d /opt/dist/cd -f
+               /var/tmp/AAAaxay6m/runtime-prototype -o
+             creating package for man fileset ...
+               $ /usr/bin/pkgmk -b /opt/TWWfsw -d /opt/dist/cd -f
+               /var/tmp/AAAaxay6m/man-prototype -o
+
+       On IRIX, building OpenSSH 3.4p1 from an individual pb-db.xml file:
+         $ pb /tmp/openssh-3.4p1.pb
+         openssh-3.4p1
+           searching for depot containing "inst" package ... found
+             depot: file:///tmp
+           checking if program installed ... yes
+           installing helper files for postinstall scripts ... done
+           generating fileset information ... done
+           filesets ... conf, man, runtime
+           building package ...
+             creating temp directory for package files ... /var/tmp/AAAa039sw
+             creating init scripts ... done
+             getting package version ... 1270170102
+             creating spec file ... done
+             creating link procedure script for man fileset ... done
+             creating link procedure script for runtime fileset ... done
+             creating procedure script to remove package ... done
+             creating config file procedure script ... done
+             creating idb entries ... done
+             creating package ...
+               $ /usr/sbin/gendist -rbase / -sbase / -idb /var/tmp/AAAa039sw/idb
+               -spec /var/tmp/AAAa039sw/spec -dist /opt/dist/cd -verbose
+               -nostrip -all -creator "The Written Word, Inc."
+             removing init scripts ... done
+
+
+BUGS
+       GPG verification of pb-db.xml and depot-db.xml files not supported.
+
+       Dependencies are not automatically built.
+
+
+SEE ALSO
+       depot-db.xml(4), pb-db.xml(4), pbutils.conf(4)
+
+
+FILES
+       /opt/TWWfsw/pbutils11/etc/pbutils.conf
+                           Configuration file
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                2006 September 21                                          pb(1)

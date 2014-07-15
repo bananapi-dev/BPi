@@ -1,0 +1,84 @@
+[tjyang@ks3c63 drbd-8.3.11]$ fdisk -l
+[tjyang@ks3c63 drbd-8.3.11]$ sudo fdisk -l
+
+Disk /dev/sdb: 1900.5 GB, 1900523028480 bytes
+255 heads, 63 sectors/track, 231058 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0x4e22e72e
+
+Disk /dev/sdb doesn't contain a valid partition table
+
+Disk /dev/sda: 10.7 GB, 10737418240 bytes
+255 heads, 63 sectors/track, 1305 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0x00046fa7
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *           1        1306    10484736   83  Linux
+[tjyang@ks3c63 drbd-8.3.11]$ sudo fdisk /dev/sdb
+Device contains neither a valid DOS partition table, nor Sun, SGI or OSF disklabel
+Building a new DOS disklabel with disk identifier 0x62435f30.
+Changes will remain in memory only, until you decide to write them.
+After that, of course, the previous content won't be recoverable.
+
+Warning: invalid flag 0x0000 of partition table 4 will be corrected by w(rite)
+
+WARNING: DOS-compatible mode is deprecated. It's strongly recommended to
+         switch off the mode (command 'c') and change display units to
+         sectors (command 'u').
+
+Command (m for help): p
+
+Disk /dev/sdb: 1900.5 GB, 1900523028480 bytes
+255 heads, 63 sectors/track, 231058 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0x62435f30
+
+   Device Boot      Start         End      Blocks   Id  System
+
+Command (m for help): n
+Command action
+   e   extended
+   p   primary partition (1-4)
+p
+Partition number (1-4): 1
+First cylinder (1-231058, default 1): 
+Using default value 1
+Last cylinder, +cylinders or +size{K,M,G} (1-231058, default 231058): 
+Using default value 231058
+
+Command (m for help): p
+
+Disk /dev/sdb: 1900.5 GB, 1900523028480 bytes
+255 heads, 63 sectors/track, 231058 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0x62435f30
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdb1               1      231058  1855973353+  83  Linux
+
+Command (m for help): w
+The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+Syncing disks.
+[tjyang@ks3c63 drbd-8.3.11]$ sudo pvcreate /dev/sdb1
+  Writing physical volume data to disk "/dev/sdb1"
+  Physical volume "/dev/sdb1" successfully created
+[tjyang@ks3c63 drbd-8.3.11]$ sudo vgcreate vg_r0 /dev/sdb1
+  Volume group "vg_r0" successfully created
+[tjyang@ks3c63 drbd-8.3.11]$ sudo lvreate -L 200G -n lv_r0 rg_r0
+sudo: lvreate: command not found
+[tjyang@ks3c63 drbd-8.3.11]$ sudo lvcreate -L 200G -n lv_r0 rg_r0
+  Volume group "rg_r0" not found
+[tjyang@ks3c63 drbd-8.3.11]$ sudo lvcreate -L 200G -n lv_r0 vg_r0
+  Logical volume "lv_r0" created
+[tjyang@ks3c63 drbd-8.3.11]$ 

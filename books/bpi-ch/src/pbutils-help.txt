@@ -1,0 +1,50 @@
+tjyang@aspire1:~$ /opt/TWWfsw/bin/pb --help
+pb: pb [options] package-file [package-file ...]
+
+      --check-sig               Check GPG signature
+  -c, --config=<path>		Path to alternate configuration file
+  -s, --depot=<depot>		Data directory
+  -G, --dist=<dist>		Name of distribution to package for
+  -d, --dist-ver=<ver>		Distribution version
+  -N, --dry-run			Dry run. Tell what would be done but do
+				not build any packages
+  -E, --egd-socket=<path>	Path to EGD socket
+      --gpg-keyring-path=<path>	Path to GPG public keyring
+  -h, --help			Output usage message then exit
+  -b, --install-base=<path>	Installation base
+  -n, --install-path=<path>	Installation path
+      --keep-temp-files		If temporary package files should be
+				kept at program exit. Default is to remove.
+      --local-depot=<depot>	Path to local depot to store files
+				retrieved from remote depots
+      --login=<login>		Login for remote depot
+      --oldstyle-dependency	assume old-style dependencies
+      --password=<pass>		Password for remote depot
+  -f, --pkg-list=<path>		Take list of packages from file <path>
+  -t, --pkg-type=<type>		Package type. Possible types are:
+				  depot inst lpp pkgadd rpm4 setld
+      --pkgdir=<path>		Where to save package files
+      --proxy-host=<host:port>	Hostname and proxy of proxy server
+      --proxy-login=<login>	Login for proxy server
+      --proxy-password=<pass>	Password to proxy server
+  -q, --query=<string>		Query information about package. <string>
+				can be one of `changelog', `init-scripts',
+				`install-base', `installed', `pbdb-path',
+				`pkgname-base', `procedure-scripts',
+				`revision', or `wrapper-scripts'
+      --query-indent=<num>	Indent query output by <num> characters
+      --sftp-known-hosts-path=<path>
+				Path to ssh_known_hosts file
+      --sftp-private-key-path=<path>
+				Path to ssh private key file
+  -1, --single-file		If supported by package manager, create
+				packages as individual files
+      --tmpbasedir=<path>	Temporary base directory to use while
+				building package files. Depending on
+				the package type, might need to be a
+				directory that can hold a copy of the
+				files being packaged.
+  -v, --verbose			Verbose output (additive)
+  -V, --version			Display program version and exit
+tjyang@aspire1:~$ 
+

@@ -1,0 +1,55 @@
+\section*{Audience}
+\noindent{}This is an introduction to CPAM(Cross-Plaform Application Management) tool. 
+Manage applications across different OS platform is a chellenage that system administrator need to face daily. 
+You can learn the application management system (AMS) that come with each OS or you can learn a CPAM tool to interact with those local AMS without the need to master each and indivisual AMS programs.
+
+
+The intended audience of this book is people who need to package software before installing software into an OS system.
+A list of local package manager has been introduced in one chapter depth and hyper package manager tools like TWW tool sets are presented in later chapters.
+
+A Hello World type of simple package creation will be used throughout this book to illustrate the differences from using various package managers.
+\section*{Book layout}
+\begin{description}
+\item[Chapter \ref{chap:preface}: \titleref{chap:preface}]
+This chapter itself.
+\item[Chapter \ref{chap:intro}: \titleref{chap:intro}]
+Software does need to be updated,deleted and queryed after it got installed into prodcution Operating System. 
+This chapter try to describe the flow of a software from birth to death.
+\item[Chapter \ref{chap:autotools}: \titleref{chap:autotools}]
+\item[Chapter \ref{chap:rpm}: \titleref{chap:rpm}]
+RPM package manager got created to manage RedHat's Linux distribution. It has been used by other Linux distributions also.
+\item[Chapter \ref{chap:pkgadd}: \titleref{chap:pkgadd}]
+Solaris 10 and prior use SVR4 pkgadd package manager to manage software.
+\item[Chapter \ref{chap:ips}: \titleref{chap:ips}]
+Starting Solaris 11, a new package management system created to correct pkgadd's shortcoming and catch up with modern package manager.
+\item[Chapter \ref{chap:deb}: \titleref{chap:deb}]
+Debean P.M. is used to manager software in Debian and Ubuntu Linux distributions.
+\item[Chapter \ref{chap:msi}: \titleref{chap:msi}]
+MSI is called to refered to a collection of tool sets in Windows OS platform to manage software.
+\item[Chapter \ref{chap:pkg}: \titleref{chap:pkg}]
+pkg is referring to tool like PackageMaker in OSX to create software .pkg type of packages.
+\item[Chapter \ref{chap:swdepot}: \titleref{chap:swdepot}]
+HP-UX use swdeopt system to create .depot type of package.
+\item[Chapter \ref{chap:sbutils}: \titleref{chap:sbutils}]
+Describes sbutils toolsets which consiste of sb to automate the software creation porcess across different operation system. 
+The software creation process of download,unpack,configure,compile and install the binary.
+
+\item[Chapter \ref{chap:pbutils}: \titleref{chap:pbutils}] 
+Describes pbutils toolsets which consiste of pb to create software packages by calling native  package manager across different operation system.
+\item[Chapter \ref{chap:pkgutils}: \titleref{chap:pkgutils}] 
+Describes pkgutils toolsets which consiste of pkg-inst,pkg-rm and pkg-info to manage software package across different operation system.
+
+\end{description}
+
+I hope you will enjoy this book and the language Go.
+
+\section*{Settings used in this book}
+\begin{itemize}
+\item Go itself is installed in \file{\~{}/go}, and \var{\$GOROOT} is set to \var{GOROOT=\~{}/go} ;
+\item Go source code we want to compile ourself is placed in \file{\~{}/g/src} and
+\var{\$GOPATH} is set to \var{GOPATH=\~{}/g} .
+\end{itemize}
+
+
+
+

@@ -1,0 +1,172 @@
+%%\documentclass[a4paper,twoside,openleft,draft]{blocksbook}
+\documentclass[letterpaper,twoside,openleft]{blocksbook}
+
+% DEBUG
+% http://tex.stackexchange.com/questions/51762/how-do-you-effectively-debug-overfull-hbox-warnings
+\showboxdepth=\maxdimen
+\showboxbreadth=\maxdimen
+%\showboxdepth=5
+%\showboxbreadth=5
+% DEBUG
+%\usepackage[nostamp]{draftwatermark} % nostamp = final copy
+%https://tex.stackexchange.com/questions/86473/suppress-xparse-message-redefining-document-command
+\usepackage[log-declarations=false]{xparse}
+\usepackage{draftwatermark}
+\SetWatermarkAngle{45}
+%\SetWatermarkColor{red}   %Color of the watermark 
+\SetWatermarkLightness{0.9}  %Lightness of the watermark text (1=white, 0=black) 
+\SetWatermarkFontSize{5cm}      %Font size of the watermark text 
+\SetWatermarkScale{1.2}      %Scaling of the watermark text 
+\SetWatermarkText{Draft} % Watermark text 
+\usepackage{fontspec}    % provides font selecting commands
+\usepackage{xunicode}    % provides unicode character macros
+\usepackage{xltxtra}     % provides some fixes/extras
+\usepackage[answerdelayed,lastexercise]{exercise}
+\usepackage[labelsep=period,labelfont=it,textfont=it]{caption}
+\usepackage{alltt}
+\usepackage{url}
+\usepackage{listings}    % to list source in content page.
+\lstloadlanguages{Pascal,bash,Python,XML}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{relsize}
+\usepackage[boldfont,slantfont]{xeCJK}
+% setup mainfont in setup.tex
+
+
+\usepackage{scalefnt}
+\usepackage{wrapfig}
+\usepackage{everypage}
+% Tables from Gnumeric.
+\usepackage{array} 
+\usepackage{longtable}
+\usepackage{calc}
+\usepackage{multirow}
+\usepackage{hhline} 
+\usepackage{ifthen} 
+\usepackage{upquote}
+% \usepackage{underscore}
+\usepackage{verbatim}
+\usepackage{fancyvrb}
+%\usepackage{moreverb}
+ 
+\usepackage{tikz}
+\usetikzlibrary{arrows,decorations.pathreplacing}
+\usepackage{float}
+%\usepackage{natbib}
+
+%% Local tex stuff.
+\usepackage{coderemarks}
+%% Must go last.
+% http://www.inf.ethz.ch/personal/markusp/teaching/guides/guide-tables.pdf
+% \usepackage{booktabs}
+\usepackage{rotating}
+
+\usepackage{hyperref}
+\input{setup.tex}
+\input{cc-license.tex}
+
+
+\begin{document}
+\thispagestyle{empty}
+\newcommand{\version}{1.0}
+
+%% Title page.
+\begin{center}
+\hspace{0.1cm}{\scalefont{4.00}{\sffamily{\mbox{\vspace{0.1cm}BPi 123}}}}\\
+\vspace{0.1cm}
+{\scalefont{1.5}\sffamily{Using Raspbery Pi}}
+\end{center}
+\vspace*{0.2cm}
+\begin{figure}[h!]
+\begin{center}
+    \includegraphics[scale=0.4]{fig/bpi-top.pdf}
+\end{center}
+\end{figure}
+\vspace*{0.02\stockheight}
+\begin{minipage}{0.4\textwidth}
+\begin{flushleft} \large
+\hspace*{0.2cm}Author:\\
+\hspace*{0.2cm}\emph{Banana Pi Community}\\
+\vfill
+\end{flushleft}
+\end{minipage}
+\hspace{5mm}
+\begin{minipage}{0.6\textwidth}
+\begin{flushright} \large
+Thanks to:\\
+\emph{Rasperry Pi Community}\\
+\vfill
+\end{flushright}
+\end{minipage}
+\vspace*{0.5cm}
+\vfill
+\begin{center}
+    \hspace*{1cm}\CcGroupByNcSa{0.83}{0.95ex}\\[2.5ex]
+    \hspace*{1cm}{\tiny\CcNote{\CcLongnameByNcSa}}
+\end{center}
+%% End title page.
+
+\newpage
+
+\thispagestyle{empty}
+\begin{figure}[H]
+\begin{center}
+\emph{
+This work is licensed under the Attribution-NonCommercial-ShareAlike 3.0 Unported License. To
+view a copy of this license, visit \url{http://creativecommons.org/licenses/by-nc-sa/3.0/} 
+or send a letter
+to Creative Commons, 171 Second Street, Suite 300, San Francisco, California, 94105, USA.}
+\vspace{2em}
+
+\emph{All example code used in this book is hereby put in the public domain.}
+\end{center}
+
+\end{figure}
+
+\clearpage
+
+\pagenumbering{roman}
+\tableofcontents*
+\listoffigures*
+\listoftables*
+\listofcode* 
+\listofex* 
+
+\clearpage
+
+
+\chapter{Getting Started}
+\label{chap:gettingstarted}
+\input{gettingstarted.tex}
+
+
+\appendix
+
+\chapter{Colophon}
+\input{colophon}
+
+
+% bibliography 
+\begin{onecolumn}
+\bibliographystyle{plain}
+% Adding following to avoid error message when pi.bin entries are not cited at all.
+\nocite{*} 
+\bibliography{pi}
+
+% Indexes 
+\begin{twocolumn}
+\chapter{Index}
+\printindex
+\end{twocolumn}
+
+
+% Ended with a blank page
+\newpage
+\thispagestyle{empty}
+\begin{center}
+\emph{This page is intentionally left blank.}
+\end{center}
+\end{onecolumn}
+
+\end{document}

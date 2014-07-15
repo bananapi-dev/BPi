@@ -1,0 +1,567 @@
+sb(1)                                                                    sb(1)
+
+
+
+NAME
+       sb - Software program build tool
+
+
+SYNOPSIS
+       sb [-B|--build] [--builddir=<path>] [--check-sig] [-c|--config=<path>]
+          [-C|--configure] [-s|--depot=<depot>] [-G|--dist=<dist>]
+          [-d|--dist-ver=<ver>] [-N|--dry-run] [-E|--egd-socket=<path>]
+          [-F|--force] [--gpg-keyring-path=<path>] [-h|--help] [--ignoredeps]
+          [-i|--install] [-b|--install-base=<path>] [-n|--install-path=<path>]
+          [--local-depot=<depot>] [--login=<login>] [-m|--module=<module>]
+          [--password=<pass>] [-f|--prog-list=<path>] [--proxy-host=<host>]
+          [--proxy-login=<host>] [--proxy-password=<host>] [-p|--purge]
+          [-q|--query=<string>] [--query-indent=<num>]
+          [--sftp-known-hosts-path=<path>] [--sftp-private-key-path=<path>]
+          [-t|--test=<test>] [-U|--uninstall] [-u|--unpack] [--update-db]
+          [--validate] [-v|--verbose] [-V|--version]
+          [<program-name>|<sb-archive> ...]
+
+
+DESCRIPTION
+       The  sb utility unpacks, configures, builds, and installs software pro‐
+       grams. Input is via an XML-based description of the  configure,  build,
+       and installation process or an encapsulated archive containing the XML-
+       based description and relevant source files.
+
+       Input is either given as ``<program-name>'' or  ``<sb-archive>''.  When
+       given  as  ``<program-name>'', either the program name or name and ver‐
+       sion can be given. When given as ``<sb-archive>'',  a  zip-encapsulated
+       archive  containing  the  XML-based description and relevant sources is
+       expected. The ``<sb-archive>'' path is given as either a local file  or
+       a URL (ftp, http, https, and sftp are supported).
+
+
+OPTIONS
+       -B, --build
+            Execute  either the script specified in the ``<build>'' element or
+            the following script:
+               $ gmake
+
+
+       --builddir <path>
+            Default directory to unpack source files to. Can also be specified
+            in  the  configuration  file using the ``build-dir'' variable. The
+            ``${SB_BUILD_PREFIX}'' variable  is  available  during  configure,
+            build, and install actions indicating the path of the build direc‐
+            tory.
+
+
+       --check-sig
+            Verify the GPG signature of the program. If sb does not  find  the
+            ``gpg''  binary in the search path, installation will fail. Before
+            using this option, the public key used to  the  sign  the  package
+            must  be present in your keyring. It is not necessary for the pub‐
+            lic key to be signed for signature verification to work.  However,
+            it is suggested that you sign the public key.
+
+
+       -c, --config <path>
+            Alternate   path  to  configuration  file.  The  default  path  is
+            ``/opt/TWWfsw/sbutils13/etc/sbutils.conf''. The format of the con‐
+            figuration file is documented in sbutils.conf(4).
+
+
+       -C, --configure
+            Execute  the  script  specified in the ``<configure>'' element. If
+            not specified, there is no default.
+
+
+       -s, --depot <depot>
+            Software depot to search for programs.  The  path  to  the  depot,
+            ``<depot>''  is either a directory or a URL. The following methods
+            are supported: ``file://'', ``ftp://'', ``http://'', ``https://'',
+            and  ``sftp://''.  Multiple  software depots can be specified. The
+            depot specified, <depot>, is the  top-level  path  to  the  depot.
+            Through the depot database file, ``depot-db.xml'', sb will descend
+            into subdirectories of the depot and search in  these  directories
+            for  additional programs. Any path with the programs must have the
+            program database file, ``sb-db.xml'' or ``<program>.sb''. The for‐
+            mat  of  the  depot-db.xml  file is documented in depot-db.xml(4).
+            The format of the sb-db.xml file is documented in sb-db.xml(4).
+
+
+       -G, --dist <dist>
+            Distribution to build for. The default CD distribution is  ``cd''.
+            For custom builds, ``<dist>'' will be the value assigned.
+
+
+       -d, --dist-ver <ver>
+            Distribution  version  to  use  when  specifying  a  remote  depot
+            (http://) or a local repository that mirrors a remote  depot.  The
+            distribution  version  matches the release number for the packages
+            to install. The special keyword ``latest'' can be used to  specify
+            the most recent distribution version.
+
+
+       -N, --dry-run
+            Indicate  what  actions  would be performed but do not execute the
+            actions. This is useful to determine what commands would  be  exe‐
+            cuted to build the program without having the build occur.
+
+
+       -E, --egd-socket <path>
+            Pathname  to  the  socket  the EGD/PRNGD daemons are listening on.
+            This is needed only if the remote depot is being accessed  through
+            https  and  the platform does not have access to a /dev/random de‐
+            vice.
+
+
+       -F, --force
+            Once installed, a program cannot be rebuilt. This option forces  a
+            rebuild of the program. If an updated version of the program is to
+            be installed in place of the existing older version,  this  option
+            must be used to build the new version.
+
+
+       --gpg-keyring-path <path>
+            Specifies  the  location of the GPG keyring. The usual location of
+            the keyring is ~/.gnupg. However, for security reasons, we encour‐
+            age  use  of  a  dedicated directory for the keyring for pkg-inst.
+            This option is required if --check-sig is given.
+
+
+       -h, --help
+            Displays short description of program options and then  exits  the
+            program.
+
+
+       --ignoredeps
+            Used  with  --uninstall,  --update-db, and --purge. Uninstalling a
+            program is not allowed if another program is dependent on the  one
+            being  uninstalled. This option overrides the dependencies and al‐
+            lows the uninstall of the program. Similarly for --purge. When us‐
+            ing  --update-db to update a database entry, the dependencies must
+            be met. This option overrides the dependency requirement.
+
+
+       -i, --install
+            Execute either the script specified in the  ``<install>''  element
+            or the following script:
+               $ gmake install
+
+
+       -b, --install-base <path>
+            Installation  base directory. Software is expected to be installed
+            in a directory wholly owned by the  software  program,  ``[install
+            base]/[install path]''. The installation prefix, combining the in‐
+            stallation base and installation path is available  as  ``${SB_IN‐
+            STALL_PREFIX}''.
+
+
+       -n, --install-path <path>
+            Installation  path containing the name of the program. Software is
+            expected to be installed in a directory wholly owned by the  soft‐
+            ware  program, ``[install base]/[install path]''. The installation
+            path can contain multiple directory components  and  the  variable
+            ``${SB_INSTALL_NAME}''  which is substituted with the value of the
+            ``<install-name>'' element. The installation prefix, combining the
+            installation base and installation path is available as ``${SB_IN‐
+            STALL_PREFIX}''.
+
+
+       --local-depot <depot>
+            Specifies the location to a remote repository to  hold  files  re‐
+            trieved when the depot is remote. pkg-inst will create a temporary
+            working directory to unpack the archives downloaded into the local
+            depot.  The  files  in the local depot are never removed. As a re‐
+            sult, ``<depot>'' can be used later as a depot for --depot.
+
+
+       --login <login>
+            Login for a remote repository requiring  authentication.  For  the
+            ``ftp://''  method,  a  default  login id of ``anonymous'' is used
+            when no login id is specified. For the  ``http://''  method,  HTTP
+            BASIC authentication is assumed.
+
+
+       -m, --module <module>
+            Building a program sometimes involves building different parts be‐
+            fore others or building the program in different ways (e.g. a  li‐
+            brary  with 32 and 64-bit libraries). The program description read
+            by sb defines multiple build methods as modules using the  ``<mod‐
+            ule>''  element. The ``<module>'' element is not required as a de‐
+            fault module is created when the sb-db.xml(4) is parsed using  the
+            ``<build-name>'',  ``<install-name>'', ``<sources>'', ``<dependen‐
+            cies>'', ``<script-header>'',  ``<configure>'',  ``<build>'',  and
+            ``<install>''   elements.  The  --module  option  indicates  which
+            ``<module>'' to use. By default, the ``default'' module is used.
+
+            The special module name ``Iall'' specified all  modules.  Multiple
+            uses of ``--module'' are allowed.
+
+
+       --password <pass>
+            Password for a remote repository requiring authentication. For the
+            ``http://'' method, HTTP BASIC authentication is assumed.
+
+
+       -f, --prog-list <file>
+            Read <file> for a list of packages. This option can  be  specified
+            multiple times.
+
+
+       --proxy-host <host>
+            If  a  remote repository is specified, use ``<host>'' as the proxy
+            server if a proxy is required to connect to remote site.
+
+
+       --proxy-login <login>
+            Login for a proxy server required to connect with a remote reposi‐
+            tory.   For  the ``ftp://'' method, a connection is initially made
+            to the proxy host with the proxy login specified  by  ``<login>''.
+            If  a  login  to  the  remote repository is specified, the command
+            ``USER <login>@<repository>'' is issued to connect to  the  remote
+            repository from the proxy server. If a login to the remote reposi‐
+            tory is not specified, the command ``USER anonymous@<repository>''
+            is  issued.  If  a password to the remote repository is specified,
+            the command `PASS <password>'' is issued to complete  the  connec‐
+            tion to the remote repository from the proxy server. If a password
+            to the remote repository is  not  specified,  the  command  ``PASS
+            anonymous'' is issued.  For the ``http://'' method, HTTP BASIC au‐
+            thentication is assumed.
+
+
+       --proxy-password <pass>
+            Password for a proxy server required  to  connect  with  a  remote
+            repository.  For the ``http://'' method, HTTP BASIC authentication
+            is assumed.
+
+
+       -p, --purge
+            Remove the program sources in the build directory.
+
+
+       -q, --query <string>
+            Request information contained in the program description. The cur‐
+            rent  supported ``<string>'' values are ``install-prefix'' for the
+            installation prefix (i.e. the value of  ``${SB_INSTALL_PREFIX}''),
+            ``install-name''  for  the  installation  name  (i.e. the value of
+            ``${SB_INSTALL_NAME}''), ``module-names'' for a list of  all  mod‐
+            ules, ``notes'' for the <notes> element in XML format, ``patches''
+            for a list of all patches, ``program-name'' for the value  of  the
+            ``name''  attribute  of  the ``<program>'' element, ``program-ver‐
+            sion'' for the value of the ``version'' attribute of  the  ``<pro‐
+            gram>''  element,  ``sbdb-path'' for the path to the XML-based de‐
+            scription file, and ``sources'' for a list of all source files.
+
+            NOTE: ``module-names'' implies ``--module=all''.
+
+
+       --query-indent=num
+            When --query=changelog or --query=notes is specified,  indent  the
+            output  by ``num'' characters. Useful as it it not simple to auto‐
+            matically indent XML output.
+
+
+       --sftp-known-hosts-path <path>
+            Path to ssh ``ssh_known_hosts'' file. When using  the  ``sftp://''
+            protocol  for  remote repositories, remote hosts are authenticated
+            against the RSA/DSA host keys in this file.
+
+
+       --sftp-private-key-path <path>
+            Path to ssh private key file for password-less  access  to  remote
+            repository.  The private key must be created without a password as
+            pb does not prompt for passwords.  The  corresponding  public  key
+            file must exist in the ``.ssh/authorized_keys'' file on the remote
+            host for either the user running pb or for the user specified with
+            ``--login'' option.
+
+
+       -t, --test
+            Execute the script specified in the ``<test>'' element.
+
+
+       -U, --uninstall
+            Uninstall  program.  Execute  the script specified in the ``<unin‐
+            stall>'' element. If no ``<uninstall>'' element exists,  the  fol‐
+            lowing script is run:
+               $ rm -rf ${SB_INSTALL_PREFIX}
+
+
+       -u, --unpack
+            Unpack source files specified in the ``<sources>'' element.
+
+
+       --update-db
+            Update either the build or install database. When used in combina‐
+            tion with --unpack, --configure, --build, --test, --uninstall,  or
+            --purge,  operate on the entry in the build database. When used in
+            combination with --install, operate on the entry  in  the  install
+            database.
+
+
+       --validate
+            Ensures all dependencies in the ``<validate>'' element are met.
+
+
+       -v, --verbose
+            Provide more verbose diagnostics during program execution.
+
+
+       -V, --version
+            Display version number of sb and exit.
+
+
+PREPROCESSING
+       Prior  to reading the description file, the XML file is preprocessed by
+       GPP, the Generic Preprocessor by  Denis  Auroux  <auroux@math.polytech‐
+       nique.fr>.  This is done to allow one description file for various con‐
+       figurations.
+
+
+BUILD AND INSTALL DATABASE
+       sb creates entries in ${SB_BUILD_BASE}/.sb when unpacking, configuring,
+       building,  and  testing and in ${SB_INSTALL_BASE}/.sb when installing a
+       program. When purging a program, the entry for the specified module  is
+       removed. The entries created in the database are stripped-down versions
+       of the original .sb file containing information needed by sb to satisfy
+       <depend>  entries.  Information on the state of the build is also saved
+       (for the ``state'' element in <depend> entries).
+
+       A new configuration variable was created for the case where  a  program
+       being  installed  installs to the same installation prefix as a program
+       that already exists in the installation database. By default, a new en‐
+       try  will  be  created in the database for the new program. However, if
+       ``rename-matching-install-prefix-entries'' is set, the old database en‐
+       try will be renamed to match the new version of the program. This makes
+       installation of a program with  multiple  modules  simple  when  a  few
+       changes are made to one of the modules in a new version of the program.
+
+       Entries  in the database should not be edited manually. The --update-db
+       option should be used to manage the database entries if manual  editing
+       is necessary.
+
+       Appropriate  read  and  write  locks are used to prohibit more than one
+       process from updating an entry in the database at the same  time.  When
+       an  entry  is  being  updated,  a write lock is obtained on the file to
+       guarantee exclusive access to the file. If another instance  of  sb  is
+       running,  it will obtain read locks on all files and, if encountering a
+       database entry with an exclusive write lock, will wait at most 10s  for
+       the write lock to complete. Once the 10s time has expired, sb will fail
+       with an appropriate error message.
+
+
+REPOSITORY
+       When sb is not given a sb-db.xml(4) file or ``.sb'' archive file as in‐
+       put,  it  traverses  a list of depots (repositories) specified with the
+       --depot option. Each repository path is expected to have either a ``de‐
+       pot-db.xml''  or  ``sb-db.xml''  file.  The  ``depot-db.xml'' file, ex‐
+       plained in depot-db.xml(4), allows sb to recursively descend into  sub‐
+       directories  searching  for a program. When depots are used, the leaves
+       usually contain ``sb-db.xml'' files for each program as follows:
+         src/depot-db.xml
+         src/openssh-3.8.1p1/
+         src/openssh-3.8.1p1/openssh-3.8.1p1.sb
+         src/openssh-3.8.1p1/openssh-3.8.1p1.sb-db
+         src/openssh-3.8.1p1/openssh-3.8.1p1.sb.md5
+         src/openssh-3.8.1p1/sb-db.xml
+         src/tetex-2.0.2/
+         src/tetex-2.0.2/tetex-2.0.2.sb
+         src/tetex-2.0.2/tetex-2.0.2.sb-db
+         src/tetex-2.0.2/tetex-2.0.2.sb.md5
+         src/tetex-2.0.2/sb-db.xml
+         src/xpm-3.4k/
+         src/xpm-3.4k/xpm-3.4k.sb
+         src/xpm-3.4k/xpm-3.4k.sb-db
+         src/xpm-3.4k/xpm-3.4k.sb.md5
+         src/xpm-3.4k/sb-db.xml
+
+       When not specifying a depot, individual ``sb-db.xml'' files  or  ``.sb'
+       archive files for each program might be laid out as:
+         src/openssh-3.8.1p1.sb
+         src/tetex-2.0.2.sb
+         src/xpm-3.4k.sb
+
+
+ENVIRONMENT VARIABLES
+       The  following environment variables are set by sb and are available to
+       the configure, build, and install scripts.
+
+
+       SB_BUILD_BASE
+            Build directory specified with  ``--build-dir''  or  the  ``build-
+            dir'' configuration variable.
+
+
+       SB_BUILD_NAME
+            Build name specified with the ``<build-name>'' element.
+
+
+       SB_BUILD_PREFIX
+            Build prefix, the result of ``${SB_BUILD_BASE}/${SB_BUILD_NAME}''.
+
+
+       SB_INSTALL_BASE
+            Installation  base  specified with ``--install-base'' or the ``in‐
+            stall-base'' configuration variable.
+
+
+       SB_INSTALL_PATH
+            Installation name specified with ``--install-path'' or  the  ``in‐
+            stall-path'' configuration variable.
+
+
+       SB_INSTALL_PREFIX
+            Installation  prefix,  the result of ``${SB_INSTALL_BASE}/${SB_IN‐
+            STALL_PATH}''. This is usually passed as the value of --prefix  in
+            the configure script.
+
+
+       SB_PROG_NAME
+            Program  name  as  given  in the ``name'' attribute of the ``<pro‐
+            gram>'' element.
+
+
+       SB_PROG_VER
+            Program version as given  in  the  ``version''  attribute  of  the
+            ``<program>'' element.
+
+
+       SB_SYSTYPE
+            System  type  returned by the GNU config.guess script. The path to
+            the config.guess script is specified  using  the  ``systype-path''
+            configuration    variable.   The   default   path   is   %contrib‐
+            dir%/bin/systype.
+
+
+CONFIGURE, BUILD, INSTALL SCRIPTS
+       All scripts are run through bash for cross-platform  portability.  Bash
+       is   invoked   with  the  command-line  arguments  ``--noprofile''  and
+       ``--norc'' to limit the side-effects of system and user-settings.
+
+
+EXAMPLES
+       Querying the list of modules available for KDE 3.5.10.
+           $ sb --query module-names kde-3.5.10
+           arts
+           default
+           kde-i18n-da
+           kde-i18n-de
+           kde-i18n-en_GB
+           kde-i18n-fi
+           kde-i18n-fr
+           kde-i18n-uk
+           kdeadmin
+           kdeartwork
+           kdebase
+           kdegraphics
+           kdelibs
+           kdenetwork
+           kdepim
+           kdesdk
+           kdeutils
+           kdevelop
+           kdewebdev
+
+       Using the --dry-run option, build the kdebase module for KDE 3.5.10:
+           $ sb --module kdebase --dry-run kde-3.5.10
+           kde-3.5.10
+             searching for depot containing "kdebase" module ... found
+               depot: file:///opt/src
+             matching system type ... ok
+             checking if program exists in local depot ... yes
+             reading database entries in /opt/TWWfsw ... done
+             syntax checks ...
+               checking for build directory ... ok
+               checking for build name ... ok
+               checking for install name ... ok
+             installation prefix ... /opt/TWWfsw/kde35
+             build prefix ... /opt/build/kdebase-3.5.10
+             unpacking sources ...
+               locating dependencies ...
+                 searching for "pkgconfig" ... /opt/TWWfsw/pkgconfig02
+                 searching for "fcpackage" ... /opt/TWWfsw/fcpackage26
+                 searching for "gettext" ... /opt/TWWfsw/gettext017
+                 searching for "jpeg" ... /opt/TWWfsw/jpeg
+                 searching for "libiconv" ... /opt/TWWfsw/libiconv112
+                 searching for "libmng" ... /opt/TWWfsw/libmng10
+                 searching for "libpng" ... /opt/TWWfsw/libpng12
+                 searching for "qt" ... /opt/TWWfsw/libqt33
+                 searching for "qt" (module="gcc42") ... skipping
+                   note: "x86_64-redhat-linuxe4" does not match system type RE
+                   note: "*-aix*|hppa*-hpux*|*-solaris*"
+                 searching for "tiff" ... /opt/TWWfsw/libtiff38
+                 searching for "zlib" ... /opt/TWWfsw/libz12
+                 searching for "/opt/TWWfsw/gcc42r" ... skipping
+                   note: "x86_64-redhat-linuxe4" does not match system type RE
+                   note: "*-aix*|hppa*-hpux*|*-solaris*"
+                 searching for "gcc" ... skipping
+                   note: "x86_64-redhat-linuxe4" does not match system type RE
+                   note: "*-aix*|hppa*-hpux*|*-solaris*"
+                 searching for "perl" ... /opt/TWWfsw/perl588
+                 searching for "coreutils" ... /opt/TWWfsw/coreutils61
+                 searching for "doxygen" ... /opt/TWWfsw/doxygen15
+                 searching for "graphviz" ... /opt/TWWfsw/graphviz224
+                 searching for "tar" ... /opt/TWWfsw/tar12
+                 searching for "dbus" ... /opt/TWWfsw/dbus12
+                 searching for "glib" ... /opt/TWWfsw/libglib216
+                 searching for "glib" (module="gcc42") ... skipping
+                   note: "x86_64-redhat-linuxe4" does not match system type RE
+                   note: "*-aix*|hppa*-hpux*|*-solaris*"
+                 searching for "bzip2" ... /opt/TWWfsw/bzip210
+                 searching for "cyrus-sasl" ... /opt/TWWfsw/libsasl21
+                 searching for "freetype" ... /opt/TWWfsw/libttf23
+                 searching for "jpeg" ... /opt/TWWfsw/jpeg
+                 searching for "libart_lgpl" ... /opt/TWWfsw/libart23
+                 searching for "libxml" ... /opt/TWWfsw/libxml26
+                 searching for "libxslt" ... /opt/TWWfsw/libxslt11
+                 searching for "openssl" ... /opt/TWWfsw/libopenssl098
+                 searching for "pcre" ... /opt/TWWfsw/libpcre78
+                 searching for "kde" (module="kdelibs") ... /opt/TWWfsw/kde35
+                 searching for "openldap" ... /opt/TWWfsw/openldap24
+                 searching for "gawk" ... /opt/TWWfsw/gawk31
+               unpacking src/kdebase-3.5.10.tar.bz2
+                 $ cd /opt/build
+                 $ /opt/TWWfsw/sbutils13/lib/aux/bzip2/bin/bzip2 -dc
+                 /opt/src/latest/graphics/kde-3.5.10/src/kdebase-3.5.10.tar.bz2 |
+                 /opt/TWWfsw/sbutils13/lib/aux/gtar/bin/gtar -xvf -
+               unpacking quilt patches from src/kdebase-3.5.10/.patches
+                 $ cd /opt/build/kdebase-3.5.10
+                 $ /opt/TWWfsw/sbutils13/lib/aux/gpatch/bin/gpatch -p0 -i
+                 /opt/src/latest/graphics/kde-3.5.10/src/kdebase-3.5.10/.patches/tww.patch
+                 $ /opt/TWWfsw/sbutils13/lib/aux/gpatch/bin/gpatch -p0 -i
+                 /opt/src/latest/graphics/kde-3.5.10/src/kdebase-3.5.10/.patches/auto.patch
+               adding database entry for "kdebase" module ... done
+             configuring ...
+               locating dependencies ...
+                 ...
+               creating configure script ... /tmp/fileeQlPyj
+               executing configure script ...
+                 $ /opt/TWWfsw/sbutils13/lib/aux/bash/bin/bash --noprofile
+                 --norc /tmp/fileBUqIKV
+               adding database entry for "kdebase" module ... done
+             building ...
+               locating dependencies ...
+                 ...
+               creating build script ... /tmp/fileeAQsF4
+               executing build script ...
+                 $ /opt/TWWfsw/sbutils13/lib/aux/bash/bin/bash --noprofile
+                 --norc /tmp/fileL9sI47
+               adding database entry for "kdebase" module ... done
+
+
+BUGS
+       Dependencies are not automatically built.
+
+
+SEE ALSO
+       depot-db.xml(4), sb-db.xml(4), sbutils.conf(4)
+
+
+FILES
+       /opt/TWWfsw/sbutils13/etc/sbutils.conf
+                           Configuration file
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                               2010 February 19                          sb(1)

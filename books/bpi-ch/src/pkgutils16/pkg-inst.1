@@ -1,0 +1,819 @@
+pkg-inst(1)                                                                                          pkg-inst(1)
+
+
+
+NAME
+       pkg-inst - Install and upgrade selected packages
+
+
+SYNOPSIS
+       pkg-inst [-e|--arg=<arg>] [--check-sig] [-c|--config=<path>] [-s|--depot=<depot>] [-G|--dist=<dist>]
+                [-d|--dist-ver=<ver>] [-N|--dry-run] [-E|--egd-socket=<path>] [--extract=<path>]
+                [--gpg-keyring-path=<path>] [-h|--help] [--ignoredeps] [--local-depot=<depot>] [--login=<login>]
+                [--match-target=<option>] [--npkg-db=<dir>] [--password=<pass>] [--pkg-db=<path>]
+                [-f|--pkg-list=<path>] [-t|--pkg-type=<type>] [--proxy-host=<host>] [--proxy-login=<host>]
+                [--proxy-password=<host>] [--reinstall] [--remove-prev-ver] [-R|--root=<path>]
+                [--rpm-arch=<arch>] [--rpm-db=<dir>] [--sftp-known-hosts-path=<path>]
+                [--sftp-private-key-path=<path>] [--subpkgs=<type>] [--systype=<type>] [--tmpbasedir=<path>]
+                [--update-type=<type>] [-v|--verbose] [-V|--version]
+                [<package>[-<ver>[-<rev>]]|<pkg-archive> ...]
+
+
+DESCRIPTION
+       The pkg-inst utility provides a front end to the  AIX  installp,  HP-UX  swinstall,  IRIX  inst,  Solaris
+       pkgadd,  Tru64  UNIX  setld,  Npkg,  and RPM package manager tools. It abstracts the package installation
+       process through the use of an XML package database that contains information about a package.
+
+       When a package is selected for installation, dependencies will automatically  be  installed  (only  those
+       components  of  the  package required to meet the dependency) Dependent packages are installed before the
+       requested package.
+
+       Packages are specified by package name or ``<pkg-archive>''. If the version and revision number  are  not
+       specified,  the  most  recent  version of the package is selected from the list of depots. If the version
+       number is specified but the revision number is not, the most recent revision of the package  is  selected
+       from  the  list  of depots. The pkg-info command can be used to provide a list of package versions. If no
+       packages are given, all packages in all depots are installed. The ``<pkg-archive>'' path is given as  ei‐
+       ther a local file or a URL (ftp, http, https, and sftp are supported).
+
+       For RPM packages, pkg-inst always uses the -U option to perform the initial installation and upgrades.
+
+
+OPTIONS
+       -e, --arg <arg>
+            Additional  arguments  to  pass  to  the package manager installation program. The default action of
+            pkg-inst is to pass minimal arguments to the package manager depending  on  the  package  management
+            system.  Multiple  instances  of  this option can be used to pass additional arguments, such as ``-a
+            TWW'' (i.e. -e -a -e TWW) to Solaris  pkgadd  or  ``--relocate  xxx=yyy''  (i.e.  -e  --relocate  -e
+            xxx=yyy) to RPM. Each argument is passed as a quoted argument to the package manager.
+
+            If  ``--remove-prev-ver''  is specified in addition to this option, and if the pkgmgr-args-inst con‐
+            figuration variable is set, additional arguments passed to the pkg-rm command will be taken from the
+            pkgmgr-args configuration variable, if specified.
+
+
+       --check-sig
+            Verify  the  GPG  signature  of  the  package  and the ``depot-db.xml'' and ``pkg-db.xml'' files. If
+            pkg-inst does not find the ``gpg'' binary in the search path, installation will  fail.  If  the  GPG
+            signature verification fails, execution will stop, even if additional packages are scheduled for in‐
+            stallation. Before using this option, the public key used to sign the package  must  be  present  in
+            your  keyring.   It  is  not necessary for the public key to be signed for signature verification to
+            work. However, it is recommended that you sign the public key.
+
+
+       -c, --config <path>
+            Alternate    path    to    configuration    file.    The    default     path     is     ``/opt/TWWf‐
+            sw/pkgutils16/etc/pkgutils.conf''.   The   format   of  the  configuration  file  is  documented  in
+            pkgutils.conf(4).
+
+
+       -s, --depot <depot>
+            Software depot to search for packages. The path to the depot, ``<depot>'' is either a directory or a
+            URL.  The  following  methods are supported: ``file://'', ``ftp://'', ``http://'', ``https://'', and
+            ``sftp://''. Multiple software depots can be specified. Packages with dependencies do  not  need  to
+            have their dependencies available in the same depot. However, all instances of a package are expect‐
+            ed to be found in a given depot (thus, the man and runtime components of a package must exist in the
+            same  depot).  The  depot specified, <depot>, is the top-level path to the depot.  Through the depot
+            database file, ``depot-db.xml'', pkg-inst will descend into subdirectories of the depot  and  search
+            in these directories for additional packages. Any path with the packages must have the package data‐
+            base file, ``pkg-db.xml''. The format of the depot-db.xml file  is  documented  in  depot-db.xml(4).
+            The  format  of  the  pkg-db.xml file is documented in pkg-db.xml(4).  The default list of depots is
+            specified with the depots variable in the configuration file.
+
+
+       -G, --dist <dist>
+            Distribution to update from. The default distribution is ``cd''. When specified, ``<dist>''  is  ap‐
+            pended  to  the depot path. Also used to specify distribution-specific variables from the configura‐
+            tion file in ``dist-opts'' section.
+
+
+       -d, --dist-ver <ver>
+            Distribution version to use when specifying a remote depot (ftp://, http://, etc.) or a local repos‐
+            itory that mirrors a remote depot. The distribution version matches the release number for the pack‐
+            ages to install. The special keyword ``latest'' can be used to specify the most recent  distribution
+            version.
+
+
+       -N, --dry-run
+            Indicate what actions would be performed but do not execute the actions. This is useful to determine
+            what commands would be executed to install the package without having the installation occur.
+
+
+       -E, --egd-socket <path>
+            Pathname to the socket the EGD/PRNGD daemons are listening on. This is needed only if the remote de‐
+            pot is being accessed through https and the platform does not have access to a /dev/random device.
+
+
+       --extract <path>
+            Extract  raw  packages from pkg-inst payload and copy to directory specified by ``<path>''. See "EX‐
+            TRACTING RAW PACKAGES" below.
+
+
+       --gpg-keyring-path <path>
+            Specifies the location of the GPG keyring. The usual location of the keyring is  ~/.gnupg.  However,
+            for  security reasons, we encourage use of a dedicated directory for the keyring. This option is re‐
+            quired if --check-sig is given.
+
+
+       -h, --help
+            Displays short description of program options and then exits the program.
+
+
+       --ignoredeps
+            When a package with dependencies is installed, pkg-inst will search the list of available depots for
+            any  dependencies that need to be installed matching the dependency criteria for the package. If de‐
+            pendencies are met and need to be installed, pkg-inst will delay the  installation  of  the  current
+            package until the dependencies are installed. This option bypasses this logic and installs the pack‐
+            age irrespective of any dependencies to install. A message indicating what dependencies  are  needed
+            will still be displayed along with a message that installation is proceeding because this option was
+            given.
+
+
+       --local-depot <depot>
+            Specifies the location to a local directory to hold files retrieved from a  remote  repository.  The
+            files in the local depot are never removed. As a result, ``<depot>'' can be used later with --depot.
+            If not specified, a temporary local depot is created and removed before pkg-inst completes.
+
+
+       --login <login>
+            Login for a remote repository requiring authentication. For the ``ftp://'' method, a  default  login
+            id  of  ``anonymous''  is used when no login id is specified. For the ``http://'' method, HTTP BASIC
+            authentication is assumed.
+
+
+       --match-target <option>
+            Restrict package installation by ``name'' and/or ``package''. This option is similar  to  the  HP-UX
+            swinstall  "Match  what  target  has" option. It allows blind installation of many packages with the
+            confidence that only newer versions of already installed packages will be installed. One  caveat  to
+            this  is  a  package needed to satisfy a dependency. If a package meets a dependency requirement, it
+            will be installed regardless of whether or not a version already exists.
+
+            If the value ``name'' is selected, package installation will be restricted to those  packages  whose
+            names,  not  package  instances, match those already installed. The package name is the same as that
+            given as a package name to pkg-inst when installing a specific package.  As long as some version  of
+            the  package  is installed, installation will proceed. If ``package'' is also specified, in addition
+            to installing the package if some version of the package is installed, only those instances  of  the
+            installed packaged will be installed.
+
+            If  the  value  ``package'' is selected, package installation will be restricted to instances of the
+            package are already installed. If the ``<ver>'' portion of the package name is  given  as  input  to
+            pkg-inst,  unless  the  instance of the package for the specified version is installed, installation
+            will fail. However, if ``<ver>'' is not specified, pkg-inst will check if any version of the package
+            has  been  installed  and,  if so, install the latest version matching the installed instance of the
+            package.  Normally, pkg-inst installs the most recent version.  With  ``--match-target=package''  in
+            effect,  only the latest version of the installed package instance can be installed, which might not
+            be the latest version of the package.
+
+
+       --npkg-db <dir>
+            Path to Npkg database, if using the Npkg package management system.
+
+
+       --password <pass>
+            Password for a remote repository requiring authentication. For the ``http://''  method,  HTTP  BASIC
+            authentication is assumed.
+
+
+       --pkg-db <path>
+            Path  to database of installed packages. In addition to the list of packages maintained by the pack‐
+            age management system, pkgutils maintains a list of packages installed with pkg-inst. This speeds up
+            pkg-info,  and  pkg-rm.  A  global package database was available in pkgutils 1.3.x which contains a
+            list of all packages ever built and their dependencies. Unfortunately, this file must be  read  with
+            every  invocation  of  chk-pkg-updates,  pkg-info, or pkg-rm making startup times slow. In addition,
+            maintaining this file for every package ever built  was  unwieldy.  If  ``<path>''  is  ''disable'',
+            pkg-db.xml entries are not written.
+
+
+       -f, --pkg-list <file>
+            Read <file> for a list of packages. This option can be specified multiple times.
+
+
+       -t, --pkg-type <type>
+            Specify  an alternate package management system. If using the native package management system, this
+            is unnecessary. If this option is not specified, pkg-inst automatically determines the package  man‐
+            agement system based on the platform it is running on. If you are using a non-native package manage‐
+            ment system such as Npkg or RPM, this option must be specified. The available <type>s are  ``depot''
+            for  HP-UX depot, ``inst'' for IRIX inst, ``lpp'' for AIX, ``npkg'' for Npkg, ``pkgadd'' for Solaris
+            pkgadd, ``rpm' for RPM, and ``setld'' for Tru64 UNIX setld.
+
+
+       --proxy-host <host>
+            If a remote repository is specified, use ``<host>'' as the proxy server if a proxy  is  required  to
+            connect to remote site.
+
+
+       --proxy-login <login>
+            Login for a proxy server required to connect with a remote repository.  For the ``ftp://'' method, a
+            connection is initially made to the proxy host with the proxy login specified by ``<login>''.  If  a
+            login  to the remote repository is specified, the command ``USER <login>@<repository>'' is issued to
+            connect to the remote repository from the proxy server. If a login to the remote repository  is  not
+            specified, the command ``USER anonymous@<repository>'' is issued. If a password to the remote repos‐
+            itory is specified, the command `PASS <password>'' is issued to complete the connection to  the  re‐
+            mote  repository from the proxy server. If a password to the remote repository is not specified, the
+            command ``PASS anonymous'' is issued.  For the ``http://'' method, HTTP BASIC authentication is  as‐
+            sumed.
+
+
+       --proxy-password <pass>
+            If the proxy host requires HTTP BASIC authentication, use ``<pass>'' as the password.
+
+
+       --reinstall
+            Prior  to  installing a package, pkg-inst checks if the package is already installed. If so, and the
+            installed version is not greater than the version in the depot, the package is skipped. If the  ver‐
+            sion in the depot is newer, the package is installed. This option will reinstall the package regard‐
+            less of the version in the depot.
+
+
+       --remove-prev-ver
+            Remove older versions of successfully installed packages. This is done by  accumulating  a  list  of
+            successfully  installed packages, determining the list of all older versions from the global package
+            database, and passing the list to the pkg-rm program for removal once pkg-inst has installed all re‐
+            quested packages.
+
+
+       -R, --root <path>
+            Alternate  root directory, as used when installing the package. This option is only applicable under
+            IRIX, HP-UX, and Solaris, whose package management systems allow specifying an alternate root direc‐
+            tory.
+
+
+       --rpm-arch <arch>
+            Specify the architecture type of the package being installed for RPM.  When installing RPM packages,
+            pkg-inst automatically determines the name that RPM uses to denote the architecture of the RPM pack‐
+            age.  When installing RPM packages for a non-native host, such as installing HP-UX packages on a So‐
+            laris host, it is not possible to determine the RPM architecture name. This option overrides the au‐
+            tomatic  detection.  Possible values for <arch> are ``alpha'' for Tru64 UNIX, ``i386'' for RHEL/x86,
+            SLES/x86, and Solaris/x86, ``ia64'' for HP-UX/IA, ``mipseb''  for  IRIX,  ``parisc''  for  HP-UX/PA,
+            ``ppc'' for AIX, ``sparc'' for Solaris, and ``x86_64'' for RHEL/x86-64 and SLES/x86-64.
+
+
+       --rpm-db <dir>
+            Path to RPM database, if using the RPM package management system.
+
+
+       --sftp-known-hosts-path <path>
+            Path  to  ssh ``ssh_known_hosts'' file. When using the ``sftp://'' protocol for remote repositories,
+            remote hosts are authenticated against the RSA/DSA host keys in this file.
+
+
+       --sftp-private-key-path <path>
+            Path to ssh private key file for password-less access to remote repository. The private key must  be
+            created  without  a password as pkg-inst does not prompt for passwords. The corresponding public key
+            file must exist in the ``.ssh/authorized_keys'' file on the remote host for either the user  running
+            pkg-inst or for the user specified with ``--login'' option.
+
+
+       --subpkgs <type>
+            All  components of a package are installed except when a dependency is being installed in which case
+            only the component required for the dependency is installed. If only a few of the  available  compo‐
+            nents are to be installed, multiple instances of this option should be used. The available component
+            <type>s are ``conf'' for local configuration files, ``doc'' for online documentation, ``libruntime''
+            for  the  library  runtime, ``man'' for GNU info and man pages, ``packages'' for 3rd-party packages,
+            and ``runtime'' for the runtime component.
+
+
+       --systype <arch>
+            Used to specify the host architecture type. Needed only if installing for an architecture type  dif‐
+            ferent  from  the  host  architecture  type (e.g. RPM). It could also be used to install Solaris 2.9
+            packages on a Solaris 2.8 host. Unless the depot is remote or the depot points to a mirror of a  re‐
+            mote repository, this option is unnecessary.
+
+
+       --tmpbasedir <path>
+            Temporary  base  directory to use when creating temporary files. Needed when package payload too big
+            for default temporary directory (/tmp or /var/tmp). The TMPDIR environment variable is set  to  this
+            path to propagate the use of the new temporary directory to the package management programs.
+
+
+       --update-type <type>
+            By  default, all update defined in the ``depot-db.xml'' file are searched for packages. The possible
+            values for ``<type>'' are ``errata'' for fixes to the distribution, ``packages''  for  all  packages
+            associated  with  a distribution, ``security'' for security fixes, ``support'' for support utilities
+            such as pkgutils, ``test'' for test releases, and ``updates'' for updates to the distribution.  When
+            an  update  occurs,  new  packages  will be installed into either ``errata'', ``security'', or ``up‐
+            dates''.
+
+
+       -v, --verbose
+            Provide more verbose diagnostics during program execution. The second level (option specified twice)
+            prints  out  information  about what depots are being read and any sub-depots being recursed into as
+            the ``depot-db.xml'' file is parsed.
+
+
+       -V, --version
+            Display version number of pkg-inst and exit.
+
+
+DEPOTS
+       pkg-inst can install packages using its own package format (which encapsulates the vendor format) and the
+       format of the native package management system. If pkg-inst is invoked without a distribution version, it
+       interprets the depot as containing packages in the native vendor format. This is somewhat weak but a com‐
+       promise allowing both methods had to be devised. Else, pkg-inst expects to find a package built using its
+       package format.
+
+
+FAILED/PARTIALLY INSTALLED PACKAGES
+       Various package management systems handle failed and partially installed packages differently. All  pack‐
+       ages considered failed or partially installed are treated as uninstalled packages to pkgutils.
+
+
+EXTRACTING RAW PACKAGES
+       The  ``--extract''  option  can be used to extract the raw packages from the ``.pkg-inst'' payload useful
+       for installation using the native package management system. Depending on the platform, copying  the  raw
+       packages to the destination directory differs. The following explains what happens:
+
+
+       AIX (lpp format)
+            LPP  package files are copied into the destination directory replacing files with the same name. LPP
+            package filenames are named ``TWW.[package].bff''. Because a separate package  name  is  not  always
+            created  for  multiple  versions  of  the  same  package  (e.g. libpng 1.2.29.  and libpng 1.3.4 are
+            ``TWW.libpng12.bff''), copying a package might overwrite an older or newer version in  the  destina‐
+            tion directory. Once the package is copied, the inutoc command is run against the destination direc‐
+            tory to create the table of contents of all packages in the destination directory, making the  pack‐
+            ages suitable for installation with installp.
+
+
+       IRIX (inst format)
+            Inst  packages  generally  comprise  four files, ``TWW[package]'', ``TWW[package].idb'', ``TWW[pack‐
+            age].sw'', and ``TWW[package].man''.  The ``TWW[package].man'' file exists if the  package  contains
+            either  man pages, info pages, or other documentation. Because a separate package name is not always
+            created for multiple versions of  the  same  package  (e.g.  libpng  1.2.29  and  libpng  1.3.4  are
+            ``TWWlibpng12''), copying a package might overwrite an older or newer version in the destination di‐
+            rectory.
+
+
+       HP-UX (depot format)
+            HP-UX packages are either files or entries in a software depot. In the former case, the  depot  file
+            is  copied  to  the destination directory, replacing an existing version in the destination with the
+            same name. Because a separate package name is not always created for multiple versions of  the  same
+            package  (e.g.  libpng  1.2.29  and libpng 1.3.4 are ``TWWlibpng12.depot''), copying a package might
+            overwrite an older or newer version in the destination directory. Packages in a  ``.pkg-inst''  pay‐
+            load  are always files. If the HP packages is an entry from a software depot, the destination direc‐
+            tory is expected to be a software depot and the swcopy(1M) command is used to transfer the package.
+
+
+       Solaris (pkgadd format)
+            Solaris packages are either files or directories. Packages in a  ``.pkg-inst''  payload  are  always
+            files.  When copying to the destination directory, the pkgtrans(1) command is used to copy the pack‐
+            age in file system format to the destination directory. Because a separate package name is  not  al‐
+            ways  created  for  multiple  versions  of the same package (e.g. libpng 1.2.29 and libpng 1.3.4 are
+            ``TWWpng12''), copying a package might overwrite an older or newer version in the destination direc‐
+            tory.  Packages  in  file  system  format (directories) and datastream format (individual files) are
+            copied into the destination directory in file system format to make installation as simple as:
+               $ pkgadd -d [destination directory] [package] [[package] ...]
+
+       If copying the files in datastream format, the pkgadd(1M) command would have to  be  executed  for  every
+       package to be installed.
+
+
+       Tru64 UNIX (setld format)
+            Tru64  UNIX  packages  exists  as  a  directory  of  one package or multiple packages. Packages in a
+            ``.pkg-inst'' payload are always created as a directory of one package (the latter format,  multiple
+            packages in a directory is not supported). Prior to copying the raw package files to the destination
+            directory, a directory name in the destination with the same name is removed. This ensures no  files
+            remain  from  an existing package after the files are copied. Because a separate package name is not
+            always created for multiple versions of the same package (e.g. libpng 1.2.29 and  libpng  1.3.4  are
+            ``TWWLIBPNG12''), copying a package might overwrite an older or newer version in the destination di‐
+            rectory.
+
+
+       RHEL, SLES, and others (RPM format)
+            Due to the filename convention for RPM packages, multiple versions of a package might exist  in  the
+            destination  directory (e.g. libpng 1.2.29 appears as TWWlibpng12-1.2.29-* and libpng 1.2.30 appears
+            as TWWlibpng12-1.2.30-*). Because RPM packages are individual files for each sub-package  component,
+            each file is copied to the destination directory.
+
+
+EXAMPLES
+       Installing the libpng image library on Solaris with a dependency on zlib using the --ignoredeps option:
+           $ pkg-inst --ignoredeps --depot=file:///opt/dist libpng
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWpng12u, TWWpng12m
+             checking for dependencies ... yes
+               TWWlibz12u (v>=1.2.3, r>=1) ... skipping installation
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWpng12u (because --ignoredeps given) ...
+               $ pkgadd -a %datadir/pkgadd/admin -d
+               /opt/dist/BAAq2aGxb TWWpng12u
+               ...
+               updating runtime fileset package database entry ... done
+             installing TWWpng12m (because --ignoredeps given) ...
+               $ pkgadd -a %datadir/pkgadd/admin -d
+               /opt/dist/BAAq2aGxb TWWpng12m
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+       Similarly, installation of libpng on HP-UX with the --ignoredeps option:
+           $ pkg-inst --ignoredeps --depot=file:///opt/dist libpng
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWlibpng12.TWWlibpng12-RUN,
+               TWWlibpng12.TWWlibpng12-MAN
+             checking for dependencies ... yes
+               TWWlibz12.TWWlibz12-RUN (v>=1.2.3, r>=1) ...
+               skipping installation
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWlibpng12.TWWlibpng12-RUN (because --ignoredeps
+             given) ...
+               $ swinstall -xenforce_dependencies=false
+               -xautoselect_dependencies=false -s /opt/dist/BAAa04377
+               TWWlibpng12.TWWlibpng12-RUN
+               ...
+               updating runtime fileset package database entry ... done
+             installing TWWlibpng12.TWWlibpng12-MAN (because --ignoredeps
+             given) ...
+               $ swinstall -xenforce_dependencies=false
+               -xautoselect_dependencies=false -s /opt/dist/BAAa04377
+               TWWlibpng12.TWWlibpng12-MAN
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+       If the --ignoredeps option is not given, pkg-inst will attempt to install all dependencies by first post‐
+       poning the installation of the package with the dependencies, installing the dependencies, and  then  re-
+       attempting  installation of the postponed package. When dependencies are installed, only those subpackage
+       components that meet the dependency criteria are installed.
+           $ pkg-inst --depot=file:///opt/dist libpng
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWpng12u, TWWpng12m
+             checking for dependencies ... yes
+               TWWlibz12u (v>=1.2.3, r>=1) ... to be installed
+             reordering packages ...
+               adding TWWlibz12u [zlib] (v>=1.2.3, r>=1) to package list
+                 found v1.2.3-4 in depot file:///opt/dist
+             will reinstall after dependencies installed
+
+           zlib
+             depot containing v1.2.3-4 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWlibz12u
+             checking for dependencies ... none
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWlibz12u ...
+               $ pkgadd -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -d
+               /opt/dist/BAAaGaWzb TWWlibz12u
+               ...
+               updating runtime fileset package database entry ... done
+             removing temporary files ... done
+
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWpng12u, TWWpng12m
+             checking for dependencies ... yes
+               TWWlibz12u (v>=1.2.3, r>=1) ... to be installed
+             reordering packages ...
+               skipping TWWlibz12u as installation already attempted
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWpng12u ...
+               $ pkgadd -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -d
+               /opt/dist/CAAbGaWzb TWWpng12u
+               ...
+               updating runtime fileset package database entry ... done
+             installing TWWpng12m ...
+               $ pkgadd -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -d
+               /opt/dist/CAAbGaWzb TWWpng12m
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+
+       Similarly, installation of libpng on Solaris using the RPM package manager:
+           $ pkg-inst --pkg-type=rpm --rpm-db=/opt/TWWfsw/.rpmdb \
+           --depot=file:///opt/dist libpng
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWlibpng12, TWWlibpng12-man
+             checking for dependencies ... yes
+               TWWlibz12 (v>=1.2.3, r>=1) ... to be installed
+             reordering packages ...
+               adding TWWlibz12 [zlib] (v>=1.2.3, r>=1) to package list
+                 found v1.2.3-5 in depot file:///opt/dist
+             will reinstall after dependencies installed
+
+           zlib
+             depot containing v1.2.3-5 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWlibz12
+             checking for dependencies ... none
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWlibz12 ...
+               $ /opt/fsw/rpm42/bin/rpm -Uv --dbpath /opt/TWWfsw/.rpmdb
+               /opt/dist/BAA0qayGb/TWWlibz12-1.2.3-5.sparc.rpm
+               ...
+               updating runtime fileset package database entry ... done
+             removing temporary files ... done
+
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///opt/dist
+             checking if already installed ... no
+               components to install: TWWlibpng12, TWWlibpng12-man
+             checking for dependencies ... yes
+               TWWlibz12 (v>=1.2.3, r>=1) ... to be installed
+             reordering packages ...
+               skipping TWWlibz12 as installation already attempted
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWlibpng12 ...
+               $ /opt/fsw/rpm42/bin/rpm -Uv --dbpath /opt/TWWfsw/.rpmdb
+               /opt/dist/CAA1qayGb/TWWlibpng12-1.2.29-1.sparc.rpm
+               ...
+               updating runtime fileset package database entry ... done
+             installing TWWlibpng12-man ...
+               $ /opt/fsw/rpm42/bin/rpm -Uv --dbpath /opt/TWWfsw/.rpmdb
+               /opt/dist/CAA1qayGb/TWWlibpng12-man-1.2.29-1.sparc.rpm
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+       Installation of libpng on IRIX using the native package manager, specifying a remote depot requiring  au‐
+       thentication, and checking the GPG signature of the package (if the package was GPG signed):
+           $ pkg-inst --check-sig --local-depot=/tmp/depot \
+           --login=<login> --password=<password> --dist-ver=latest \
+           --depot=http://updates.thewrittenword.com libpng
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               http://updates.thewrittenword.com
+             checking if already installed ... no
+               components to install: TWWlibpng12.sw.base, TWWlibpng12.man.pages
+             checking for dependencies ... yes
+               TWWlibz12.sw.base (v>=1279590100) ... to be installed
+             reordering packages ...
+               adding TWWlibz12.sw.base [zlib] (v>=1279590100) to package list
+                 found v1279590104 in depot http://updates.thewrittenword.com
+             will reinstall after dependencies installed
+
+           zlib
+             depot containing v1.2.3-4 of this package ...
+               http://updates.thewrittenword.com
+             checking if already installed ... no
+               components to install: TWWlibz12.sw.base
+             checking for dependencies ... none
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             verifying GPG signature of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWlibz12.sw.base ...
+               $ inst -a -V beep:off -V show_files:on -V overprint:off -V
+               exitop_limit:300000 -f /opt/dist/BAAa00pEY -I
+               TWWlibz12.sw.base
+               ...
+               updating runtime fileset package database entry ... done
+             removing temporary files ... done
+
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               http://updates.thewrittenword.com
+             checking if already installed ... no
+               components to install: TWWlibpng12.sw.base, TWWlibpng12.man.pages
+             checking for dependencies ... yes
+               TWWlibz12.sw.base (v>=1279590100) ... to be installed
+             reordering packages ...
+               skipping TWWlibz12.sw.base as installation already attempted
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             verifying GPG signature of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWWlibpng12.sw.base ...
+               $ inst -a -V beep:off -V show_files:on -V overprint:off
+               -V exitop_limit:300000 -f /opt/dist/CAAa00pEY -I
+               TWWlibpng12.sw.base
+               ...
+               updating runtime fileset package database entry ... done
+             installing TWWlibpng12.man.pages ...
+               $ inst -a -V beep:off -V show_files:on -V overprint:off
+               -V exitop_limit:300000 -f /opt/dist/CAAa00pEY -I
+               TWWlibpng12.man.pages
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+       Using the --extract=<path> option to copy the raw packages for the libpng library and its dependencies on
+       Tru64 UNIX:
+           $ pkg-inst --local-depot=/tmp/depot --extract=/tmp/pkgs \
+           --login=<login> --password=<password> --dist-ver=latest \
+           --depot=http://updates.thewrittenword.com libpng
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               http://updates.thewrittenword.com
+             checking if already installed ... no
+               components to install: TWWLIBPNG12BIN510, TWWLIBPNG12MAN510
+             checking for dependencies ... yes
+               TWWLIBZ12BIN510 (v>=1.2.3, r>=1) ... to be installed
+             reordering packages ...
+               adding TWWLIBZ12BIN510 [zlib] (v>=1.2.3, r>=1) to package list
+                 found v1.2.3-5 in depot http://updates.thewrittenword.com
+             will reinstall after dependencies installed
+
+           zlib
+             depot containing v1.2.3-5 of this package ...
+               http://updates.thewrittenword.com
+             checking if already installed ... no
+               components to install: TWWLIBZ12BIN510
+             checking for dependencies ... none
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             copying TWWLIBZ12BIN510 ...
+               $ cp -pr /opt/dist/depot/BAAjXh0Sv/TWWLIBZ12 \
+               /tmp/pkgs/TWWLIBZ12
+             removing temporary files ... done
+
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               http://updates.thewrittenword.com
+             checking if already installed ... no
+               components to install: TWWLIBPNG12BIN510, TWWLIBPNG12MAN510
+             checking for dependencies ... yes
+               TWWLIBZ12BIN510 (v>=1.2.3, r>=1) ... to be installed
+             reordering packages ...
+               skipping TWWLIBZ12BIN510 as installation already attempted
+             checking if package exists in local depot ... yes
+             verifying MD5 checksum of package payload ... ok
+             comparing package checksum in local depot against depot ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             copying TWWLIBPNG12BIN510 ...
+               $ cp -pr /opt/dist/depot/CAADFBLqo/TWWLIBPNG12 \
+               /tmp/pkgs/TWWLIBPNG12
+             copying TWWLIBPNG12MAN510 ...
+               $ cp -pr /opt/dist/depot/CAADFBLqo/TWWLIBPNG12 \
+               /tmp/pkgs/TWWLIBPNG12
+             removing temporary files ... done
+
+       pkg-archve files can be specified on the command-line rather than the package name for  installation.  If
+       multiple  .pkg-inst archive files are specified, dependencies are expected to be resolved between the in‐
+       put files. The example below installs libpng 1.2.29 on AIX 6.1:
+           $ pkg-inst libpng-1.2.29-1.lpp.pkg-inst
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///tmp/libpng-1.2.29-1.lpp.pkg-inst
+             checking if already installed ... no
+               components to install: TWW.libpng12.rte, TWW.libpng12.man
+             checking for dependencies ... yes
+               TWW.libz12.rte (v>=1.2.3.1) ... to be installed
+             reordering packages ...
+               could not find entry for TWW.libz12 in any depot. skipping
+
+           $ pkg-inst libpng-1.2.29-1.lpp.pkg-inst zlib-1.2.3-4.lpp.pkg-inst
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///tmp/libpng-1.2.29-1.lpp.pkg-inst
+             checking if already installed ... no
+               components to install: TWW.libpng12.rte, TWW.libpng12.man
+             checking for dependencies ... yes
+               TWW.libz12.rte (v>=1.2.3.1) ... to be installed
+             reordering packages ...
+               adding TWW.libz12.rte [zlib] (v>=1.2.3.1) to package list
+                 found v1.2.3.4 in depot file:///tmp/zlib-1.2.3-4.lpp.pkg-inst
+             will reinstall after dependencies installed
+
+           zlib
+             depot containing v1.2.3-4 of this package ...
+               file:///tmp/zlib-1.2.3-4.lpp.pkg-inst
+             checking if already installed ... no
+               components to install: TWW.libz12.rte
+             checking for dependencies ... none
+             verifying MD5 checksum of package payload ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWW.libz12.rte ...
+               $ installp -acqQ -V2 -d /opt/dist/depot/oXAmic/TWW.libz12.bff
+               TWW.libz12.rte
+               ...
+               updating runtime fileset package database entry ... done
+
+           libpng
+             depot containing v1.2.29-1 of this package ...
+               file:///tmp/libpng-1.2.29-1.lpp.pkg-inst
+             checking if already installed ... no
+               components to install: TWW.libpng12.rte, TWW.libpng12.man
+             checking for dependencies ... yes
+               TWW.libz12.rte (v>=1.2.3.1) ... to be installed
+             reordering packages ...
+               skipping TWW.libz12.rte as installation already attempted
+             verifying MD5 checksum of package payload ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWW.libpng12.rte ...
+               $ installp -acqQ -V2 -d /opt/dist/depot/pDAmid/TWW.libpng12.bff
+               TWW.libpng12.rte
+               ...
+               updating runtime fileset package database entry ... done
+             installing TWW.libpng12.man ...
+               $ installp -acqQ -V2 -d /opt/dist/depot/pDAmid/TWW.libpng12.bff
+               TWW.libpng12.man
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+           zlib
+             depot containing v1.2.3-4 of this package ...
+               file:///tmp/zlib-1.2.3-4.lpp.pkg-inst
+             checking if already installed ... no
+               components to install: TWW.libz12.rte, TWW.libz12.man
+               skipping TWW.libz12.rte as installation already attempted
+             checking for dependencies ... none
+             verifying MD5 checksum of package payload ... ok
+             extracting package files ...
+               extracting data.zip file ... done
+               testing data.zip ... done
+               unpacking data.zip contents ... done
+             installing TWW.libz12.man ...
+               $ installp -acqQ -V2 -d /opt/dist/depot/qxAmie/TWW.libz12.bff
+               TWW.libz12.man
+               ...
+               updating man fileset package database entry ... done
+             removing temporary files ... done
+
+
+CAVEATS
+       The --remove-prev-ver option is executed after installation is complete. This  increases  the  amount  of
+       disk space required for an installation. Removing packages immediately after a successful installation is
+       ideal but impossible as a package to be installed later in the same run might depend on the package  just
+       removed.
+
+
+SEE ALSO
+       depot-db.xml(4), pkg-db.xml(4), pkg-info(1), pkgutils.conf(4), pkg-rm(1)
+
+
+FILES
+       /var/opt/TWWfsw/pkgutils16
+                           Default path for pkg-db.xml package database files (cf.  --pkg-db)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                2010 February 24                                     pkg-inst(1)

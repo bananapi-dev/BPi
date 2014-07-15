@@ -1,0 +1,145 @@
+<!ELEMENT programs (program+)>
+<!ELEMENT program ((build-name?, install-base?,
+install-name?, sources?, dependencies?, validate?,
+script-header?, configure?, build?, test?, install?,
+uninstall?, purge?)?, module*, notes*, changelog?)>
+<!ATTLIST program
+  name			CDATA		#REQUIRED
+  revision		CDATA		"0"
+  systype		CDATA		#IMPLIED
+  version		CDATA		#REQUIRED>
+<!ELEMENT module (build-name?, install-base?,
+install-name?, sources?, dependencies?, validate?,
+script-header?, configure?, build?, test?, install?,
+uninstall?, purge?)>
+<!ATTLIST module
+  auto-include		CDATA		"1"
+  build			CDATA		"1"
+  name			CDATA		#REQUIRED
+  systype		CDATA		#IMPLIED>
+<!ELEMENT build-name (#PCDATA)>
+<!ELEMENT install-base (#PCDATA)>
+<!ATTLIST install-base
+  install-prefix-only	CDATA		"0">
+<!ELEMENT install-name (#PCDATA)>
+<!ATTLIST install-name
+  append		CDATA		#IMPLIED
+  version		CDATA		#IMPLIED>
+<!ELEMENT sources (source | patch)+>
+<!ELEMENT source (#PCDATA)>
+<!ATTLIST source
+  checksum		CDATA		#IMPLIED
+  checksum-type		CDATA		#IMPLIED
+  destdir		CDATA		#IMPLIED
+  encoding		CDATA		#IMPLIED
+  filename		CDATA		#IMPLIED
+  noop			CDATA		#IMPLIED
+  path			CDATA		#REQUIRED
+  size			CDATA		"0"
+  systype		CDATA		#IMPLIED
+  var			CDATA		#IMPLIED>
+<!ELEMENT patch (#PCDATA)>
+<!ATTLIST patch
+  arg			CDATA		#IMPLIED
+  build-name		CDATA		#IMPLIED
+  checksum		CDATA		#IMPLIED
+  checksum-type		CDATA		#IMPLIED
+  destdir		CDATA		#IMPLIED
+  encoding		CDATA		#IMPLIED
+  filename		CDATA		#IMPLIED
+  noop			CDATA		#IMPLIED
+  path			CDATA		#REQUIRED
+  size			CDATA		"0"
+  systype		CDATA		#IMPLIED
+  var			CDATA		#IMPLIED>
+<!ELEMENT dependencies (depend+)>
+<!ATTLIST dependencies
+  replace		CDATA		"1">
+<!ELEMENT depend (#PCDATA)>
+<!ATTLIST depend
+  add-path		CDATA		#IMPLIED
+  append		CDATA		#IMPLIED
+  group			CDATA		#IMPLIED
+  install-base		CDATA		#IMPLIED
+  install-name		CDATA		#IMPLIED
+  module		CDATA		#IMPLIED
+  progname		CDATA		#IMPLIED
+  program		CDATA		#IMPLIED
+  require		CDATA		"1"
+  set-var-only		CDATA		#IMPLIED
+  state			(unpack
+			| configure
+			| build
+			| install
+			| test)		"install"
+  systype		CDATA		#IMPLIED
+  type			(build
+			| run)		"run"
+  user			CDATA		#IMPLIED
+  var			CDATA		#IMPLIED
+  var-substitute	CDATA		"1"
+  version		CDATA		#IMPLIED>
+<!ELEMENT validate (depend+)>
+<!ELEMENT script-header (#PCDATA)>
+<!ATTLIST script-header
+  replace		CDATA		"1">
+<!ELEMENT configure (#PCDATA)>
+<!ELEMENT build (#PCDATA)>
+<!ELEMENT test (#PCDATA | dependencies)*>
+<!ATTLIST test
+  auto-include		CDATA		"1">
+<!ELEMENT install (#PCDATA)>
+<!ELEMENT uninstall (#PCDATA | remove-db-entry)*>
+<!ELEMENT purge (#PCDATA)>
+<!ELEMENT notes (change*, note*, platform*)>
+<!ATTLIST notes
+  name			CDATA		#IMPLIED>
+<!ELEMENT note (indent | orderedlist | para | screen | unorderedlist)*>
+<!ATTLIST note
+  type			(build
+			| compilation
+			| configuration
+			| installation
+			| usage)	#REQUIRED>
+<!ELEMENT indent (indent | orderedlist | para | screen | unorderedlist)*>
+<!ELEMENT para (#PCDATA | command | ulink)*>
+<!ELEMENT remove-db-entry (#PCDATA)>
+<!ATTLIST remove-db-entry
+  add-path		CDATA		#IMPLIED
+  append		CDATA		#IMPLIED
+  install-base		CDATA		#IMPLIED
+  install-name		CDATA		#IMPLIED
+  module		CDATA		#IMPLIED
+  program		CDATA		#IMPLIED
+  systype		CDATA		#IMPLIED
+  version		CDATA		#IMPLIED>
+<!ELEMENT command (#PCDATA)>
+<!ELEMENT ulink (#PCDATA)>
+<!ATTLIST ulink
+  url 			CDATA		#REQUIRED>
+<!ELEMENT screen (#PCDATA)>
+<!ELEMENT orderedlist (item+)>
+<!ATTLIST orderedlist
+  start-num		CDATA		"1"
+  type			(decimal
+			| lower-alpha
+			| upper-alpha
+			| lower-roman
+			| upper-roman)	"decimal">
+<!ELEMENT unorderedlist (item+)>
+<!ELEMENT platform (para | screen | orderedlist | unorderedlist)*>
+<!ATTLIST platform
+  name			CDATA		#IMPLIED>
+<!ELEMENT change (para*, (items | item)*)>
+<!ATTLIST change
+  author		CDATA		#IMPLIED
+  date			CDATA		#IMPLIED
+  email			CDATA		#IMPLIED
+  from			CDATA		#IMPLIED
+  revision		CDATA		#IMPLIED
+  to			CDATA		#IMPLIED>
+<!ELEMENT items (para*, item*)>
+<!ATTLIST items
+  name			CDATA		#REQUIRED>
+<!ELEMENT item (para | screen | orderedlist | unorderedlist)*>
+<!ELEMENT changelog (change+)>

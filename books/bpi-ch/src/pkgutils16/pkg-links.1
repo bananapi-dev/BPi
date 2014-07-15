@@ -1,0 +1,182 @@
+pkg-links(1)                                                                                        pkg-links(1)
+
+
+
+NAME
+       pkg-links - Install/remove links in common bin, info, man directories
+
+
+SYNOPSIS
+       pkg-links [-e|--arg=<arg>] [-c|--config=<path>] [--dist=<dist>] [-h|--help] [-b|--install-base=<path>]
+                 [--npkg-db=<dir>] [--pkg-db=<path>] [-f|--pkg-list=<path>] [-t|--pkg-type=<type>]
+                 [-R|--root=<path>] [--rpm-db=<dir>] [--subpkgs=<type>] [--systype=<arch>] [-u|--uninstall]
+                 [-v|--verbose] [-V|--version] [<package>[-<ver>] ...]
+
+
+DESCRIPTION
+       The pkg-links utility installs and removes links in the common bin, info, and man directories  for  pack‐
+       ages  provided  by  The  Written  Word.  Packages  shipped  by  The  Written Word contain postinstall and
+       postremove scripts to automatically install and remove the links  at  package  installation  and  removal
+       time.  For  some package management systems, it is not possible to execute the postinstall and postremove
+       scripts independent of installing and removing the package.  Thus, if the links need to be  installed  or
+       removed,  the  package must be installed or removed. This utility executes the postinstall and postremove
+       scripts independent of the package management system. The HP-UX depot and Tru64 UNIX setld  systems  pro‐
+       vide  this ability in their package management systems so pkg-links is merely a front-end for these pack‐
+       age management systems.
+
+       Packages  are  specified  by  package  name  and   an   optional   version,   revision   number   (<pack‐
+       age>[-<ver>[-<rev>]]). If the version number is not specified, all installed versions of the package will
+       be configured. If the revision number is not specified, only  the  installed  version  matching  ``<pack‐
+       age>-<ver>'' will be configured.  The pkg-info command can be used to provide a list of packages.
+
+       The default action of pkg-links is to create the common links.
+
+
+OPTIONS
+       -c, --config <path>
+            Alternate     path     to     configuration    file.    The    default    path    is    ``/opt/TWWf‐
+            sw/pkgutils16/etc/pkgutils.conf''.  The  format  of  the  configuration  file   is   documented   in
+            pkgutils.conf(4).   pkg-links  uses  the  following  variables  in  the configuration file: npkg-db,
+            pkg-type, root, rpm-db.
+
+
+       -e, --arg <arg>
+            Additional arguments to pass to the package manager. This serves a similar purpose to the same argu‐
+            ment  provided  by  the pkg-inst command. Its use is primarily to add arguments to the RPM and HP-UX
+            package managers. By default, no arguments are passed to the package manager. Multiple instances  of
+            this option can be used to pass additional arguments.
+
+
+       --dist <dist>
+            Distribution to get information for. Used main to get distribution-specific variables in config file
+            in ``dist-opts'' section.
+
+
+       -h, --help
+            Displays short description of program options and then exits the program.
+
+
+       -b, --install-base <dir>
+            Specify the installation base directory where the package has been installed. The default  value  is
+            ``/opt/TWWfsw''.  This option is needed only if the administrative ``basedir'' directory was changed
+            on Solaris (cf.  admin(4)).  If the --relocate option was given for RPM packages, pkg-links will au‐
+            tomatically detect the relocated files by quering the RPM database.
+
+
+       --npkg-db <dir>
+            Path to Npkg database, if using the Npkg package management system.
+
+
+       --pkg-db <path>
+            Path  to database of installed packages. In addition to the list of packages maintained by the pack‐
+            age management system, pkgutils maintains a list of packages installed with pkg-inst. This speeds up
+            pkg-info,  and  pkg-rm.  A  global package database was available in pkgutils 1.3.x which contains a
+            list of all packages ever built and their dependencies. Unfortunately, this file must be  read  with
+            every  invocation  of  chk-pkg-updates,  pkg-info, or pkg-rm making startup times slow. In addition,
+            maintaining this file for every package ever built  was  unwieldy.  If  ``<path>''  is  ''disable'',
+            pkg-db.xml entries are ignored.
+
+
+       -f, --pkg-list <file>
+            Read <file> for a list of packages. This option can be specified multiple times. Package entries are
+            specified one per line in <file>.
+
+
+       -t, --pkg-type <type>
+            Specify an alternate package management system. If using the native package management system,  this
+            is unnecessary. If this option is not specified, pkg-links automatically determines the package man‐
+            agement system based on the platform it is running on. If using a non-native package management sys‐
+            tem  such  as  Npkg  or  RPM, this option must be specified. The available <type>s are ``depot'' for
+            HP-UX depot, ``inst'' for IRIX inst, ``lpp'' for AIX, ``npkg''  for  Npkg,  ``pkgadd''  for  Solaris
+            pkgadd, ``rpm' for RPM, and ``setld'' for Tru64 UNIX setld.
+
+            -R, --root <path> Alternate root directory, as used when installing the package. This option is only
+            applicable under IRIX, HP-UX, and Solaris, whose package management systems allow specifying an  al‐
+            ternate root directory.
+
+
+       --rpm-db <dir>
+            Path to RPM database, if using the RPM package management system.
+
+
+       --subpkgs <type>
+            The ``man'', ``packages'', and ``runtime'' components of a package are configured when no subpackage
+            type is specified. The available component <type>s are ``man'' for GNU info and man  pages,  ``pack‐
+            ages'' for 3rd-party packages, and ``runtime'' for the runtime component.
+
+
+       -s, --systype <arch>
+            Architecture  type for packages to display. Multiple instances of this option are supported. The ar‐
+            chitecture type ``all'' represents all architectures, if using the Npkg package management system.
+
+
+       -u, --uninstall <arch>
+            As stated above, the default action is to install the links in the common bin, info, and man  direc‐
+            tories.  With  this  option,  the links are removed. It is safe to rerun this option after the links
+            have already been removed.
+
+
+       -v, --verbose
+            Provide more verbose diagnostics during program execution.  pkg-links uses the package  database  to
+            determine  what possible versions exist for a package. The default action is not to display informa‐
+            tion messages as pkg-links runs if the package does not exist but to limit such  messages  to  those
+            that exist. With this option, the status messages will display even for packages that do not exists.
+
+
+       -V, --version
+            Display version number and exit.
+
+
+EXAMPLES
+       Installing  links in the common info and man directories for the texinfo package on Solaris using the na‐
+       tive package management system:
+         $ pkg-info --link-listing=short texinfo
+         texinfo
+           checking if v4.3-2 installed (TWWtxi43) ... yes
+             installed instances ... TWWtxi43m TWWtxi43u TWWtxi43d
+             searching for common links ... found
+           checking if v4.2-1 installed (TWWtxi42) ... yes
+             installed instances ... TWWtxi42m TWWtxi42u TWWtxi42d
+             searching for common links ... none found
+           common links ...
+             bin: TWWtxi43u
+             info: TWWtxi43m
+             man: TWWtxi43m
+
+         $ pkg-links --subpkgs=man --uninstall texinfo-4.3
+         texinfo
+           checking if v4.3-2 installed (TWWtxi43) ... yes
+             installed instances ... TWWtxi43m
+             searching for common links ... found
+             removing info entries from dir file by running:
+               $ sh /opt/TWWfsw/texinfo43/tww-inst/rm-links-m info man
+               ...
+             removing links in info, man for TWWtxi43m:
+               ...
+
+         $ pkg-info --link-listing=short texinfo
+         texinfo
+           checking if v4.3-2 installed (TWWtxi43) ... yes
+             installed instances ... TWWtxi43m TWWtxi43u TWWtxi43d
+             searching for common links ... found
+           checking if v4.2-1 installed (TWWtxi42) ... yes
+             installed instances ... TWWtxi42m TWWtxi42u TWWtxi42d
+             searching for common links ... none found
+           common links ...
+             bin: TWWtxi43u
+
+SEE ALSO
+       pkg-info(1), pkgutils.conf(4)
+
+
+FILES
+       /var/opt/TWWfsw/pkgutils16
+                           Default path for pkg-db.xml package database files (cf.  --pkg-db)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                2009 December 11                                    pkg-links(1)

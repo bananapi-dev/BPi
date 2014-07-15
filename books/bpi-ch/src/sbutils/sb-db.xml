@@ -1,0 +1,1426 @@
+sb-db.xml(4)                                                      sb-db.xml(4)
+
+
+
+NAME
+       sb-db.xml
+
+
+FILE FORMAT
+       The  ``sb-db.xml''  file  encapsulates  dependency,  configure,  build,
+       install, test, validation, and source file information about a program.
+       The information is used by sb to build a software program.
+
+       The DTD for the XML file is as follows:
+           <!ELEMENT programs (program+)>
+           <!ELEMENT program ((build-name?, install-base?,
+           install-name?, sources?, dependencies?, validate?,
+           script-header?, configure?, build?, test?, install?,
+           uninstall?, purge?)?, module*, licenses?, notes*,
+           changelog?)>
+             name                          CDATA           #REQUIRED
+             revision                      CDATA           '0'
+             systype                       CDATA           #IMPLIED
+             version                       CDATA           #REQUIRED>
+           <!ELEMENT module (state?, build-name?, install-base?,
+           install-name?, sources?, dependencies?, validate?,
+           script-header?, configure?, build?, test?, install?,
+           uninstall?, purge?)>
+           <!ATTLIST module
+             auto-include                  CDATA           '1'
+             build                         CDATA           '1'
+             name                          CDATA           #REQUIRED
+             systype                       CDATA           #IMPLIED>
+           <!ELEMENT state (#PCDATA)>
+           <!ELEMENT build-name (#PCDATA)>
+           <!ELEMENT install-base (#PCDATA)>
+           <!ATTLIST install-base
+             install-prefix-only           CDATA           '0'>
+           <!ELEMENT install-name (#PCDATA)>
+           <!ATTLIST install-name
+             append                        CDATA           #IMPLIED
+             version                       CDATA           #IMPLIED>
+           <!ELEMENT sources (source | patch)+>
+           <!ELEMENT source (#PCDATA)>
+           <!ATTLIST source
+             checksum                      CDATA           #IMPLIED
+             checksum-type                 CDATA           #IMPLIED
+             destdir                       CDATA           #IMPLIED
+             encoding                      CDATA           #IMPLIED
+             filename                      CDATA           #IMPLIED
+             noop                          CDATA           #IMPLIED
+             path                          CDATA           #REQUIRED
+             size                          CDATA           '0'
+             systype                       CDATA           #IMPLIED
+             var                           CDATA           #IMPLIED>
+           <!ELEMENT patch (#PCDATA)>
+           <!ATTLIST patch
+             arg                           CDATA           #IMPLIED
+             build-name                    CDATA           #IMPLIED
+             checksum                      CDATA           #IMPLIED
+             checksum-type                 CDATA           #IMPLIED
+             destdir                       CDATA           #IMPLIED
+             encoding                      CDATA           #IMPLIED
+             filename                      CDATA           #IMPLIED
+             noop                          CDATA           #IMPLIED
+             path                          CDATA           #REQUIRED
+             size                          CDATA           '0'
+             systype                       CDATA           #IMPLIED
+             var                           CDATA           #IMPLIED>
+           <!ELEMENT dependencies (depend*)>
+           <!ATTLIST dependencies
+             replace                       CDATA           '1'>
+           <!ELEMENT depend (#PCDATA)>
+           <!ATTLIST depend
+             add-path                      CDATA           #IMPLIED
+             append                        CDATA           #IMPLIED
+             group                         CDATA           #IMPLIED
+             install-base                  CDATA           #IMPLIED
+             install-name                  CDATA           #IMPLIED
+             lib-search-path-components    CDATA           #IMPLIED
+             module                        CDATA           #IMPLIED
+             path                          CDATA           #IMPLIED
+             progname                      CDATA           #IMPLIED
+             program                       CDATA           #IMPLIED
+             require                       CDATA           '1'
+             set-var-only                  CDATA           #IMPLIED
+             state                         (unpack
+                                           | configure
+                                           | build
+                                           | install
+                                           | test)         'install'
+             systype                       CDATA           #IMPLIED
+             type                          (build
+                                           | run)          'run'
+             user                          CDATA           #IMPLIED
+             var                           CDATA           #IMPLIED
+             var-substitute                CDATA           '1'
+             version                       CDATA           #IMPLIED>
+           <!ELEMENT validate (depend*)>
+           <!ELEMENT script-header (#PCDATA)>
+           <!ATTLIST script-header
+             replace                       CDATA           '1'>
+           <!ELEMENT configure (#PCDATA)>
+           <!ELEMENT build (#PCDATA)>
+           <!ELEMENT test (#PCDATA | dependencies)*>
+           <!ATTLIST test
+             auto-include                  CDATA           '1'>
+           <!ELEMENT install (#PCDATA)>
+           <!ELEMENT uninstall (#PCDATA | remove-db-entry)*>
+           <!ELEMENT purge (#PCDATA)>
+           <!ELEMENT licenses (para*, license+)>
+           <!ELEMENT license (indent | orderedlist | para | screen |
+           unorderedlist)*>
+           <!ATTLIST license
+             module                        CDATA           #IMPLIED
+             path                          CDATA           #IMPLIED>
+           <!ELEMENT notes (change*, note*, platform*)>
+           <!ATTLIST notes
+             name                          CDATA           #IMPLIED>
+           <!ELEMENT note (indent | orderedlist | para | screen |
+           unorderedlist)*>
+           <!ATTLIST note
+             type                          (build
+                                           | compilation
+                                           | configuration
+                                           | installation
+                                           | usage)        #REQUIRED>
+           <!ELEMENT indent (indent | orderedlist | para | screen |
+           unorderedlist)*>
+           <!ELEMENT para (#PCDATA | command | ulink)*>
+           <!ATTLIST para
+             align                         (left
+                                           | center
+                                           | right)        'left'
+             skip                          CDATA           #IMPLIED>
+           <!ELEMENT remove-db-entry (#PCDATA)>
+           <!ATTLIST remove-db-entry
+             add-path                      CDATA           #IMPLIED
+             append                        CDATA           #IMPLIED
+             install-base                  CDATA           #IMPLIED
+             install-name                  CDATA           #IMPLIED
+             module                        CDATA           #IMPLIED
+             program                       CDATA           #IMPLIED
+             systype                       CDATA           #IMPLIED
+             version                       CDATA           #IMPLIED>
+           <!ELEMENT command (#PCDATA)>
+           <!ELEMENT ulink (#PCDATA)>
+           <!ATTLIST ulink
+             url                           CDATA           #REQUIRED>
+           <!ELEMENT screen (#PCDATA)>
+           <!ELEMENT orderedlist (item+)>
+           <!ATTLIST orderedlist
+             start-num                     CDATA           '1'
+             type                          (decimal
+                                           | lower-alpha
+                                           | upper-alpha
+                                           | lower-roman
+                                           | upper-roman)  'decimal'>
+           <!ELEMENT unorderedlist (item+)>
+           <!ELEMENT platform (para | screen | orderedlist |
+           unorderedlist)*>
+           <!ATTLIST platform
+             name                          CDATA           #IMPLIED>
+           <!ELEMENT change (item | items | orderedlist | para |
+           screen | unorderedlist)*>
+           <!ATTLIST change
+             author                        CDATA           #IMPLIED
+             date                          CDATA           #IMPLIED
+             email                         CDATA           #IMPLIED
+             from                          CDATA           #IMPLIED
+             revision                      CDATA           #IMPLIED
+             to                            CDATA           #IMPLIED>
+           <!ELEMENT items (para | item | orderedlist | screen |
+           unorderedlist)*>
+           <!ATTLIST items
+             name                          CDATA           #REQUIRED>
+           <!ELEMENT item (indent | para | screen | orderedlist |
+           unorderedlist)*>
+           <!ELEMENT changelog (change+)>
+
+
+GLOBAL VALUES
+       With  the exception of the ``<module>'' element, all elements valid for
+       the ``<program>'' element can be specified for  ``<module>''.  Elements
+       in  ``<module>''  override defaults given in ``<program>''.  Therefore,
+       if multiple modules are specified, the ``<program>''  element  contains
+       defaults that are used in modules unless overridden.
+
+
+VARIABLE SUBSTITUTION
+       Variable  substitution  is  performed on XML element values to obtain a
+       value. Variable substitution is performed on  the  following  elements:
+       ``<build-name>'',  ``<depend>'',  ``<install-name>'',  ``<patch>'', and
+       ``<source>''. The following variables are substituted
+
+       ${SB_BUILD_BASE}
+            Substitution performed  for  installation  prefix.  The  value  of
+            ``${SB_BUILD_BASE}''  is  the  build directory, specified with the
+            --builddir option or the build-dir configuration variable.
+
+
+       ${SB_INSTALL_NAME}
+            Substitution performed  for  installation  prefix.  The  value  of
+            ``${SB_INSTALL_NAME}'' is the value of the ``<install-name>'' ele‐
+            ment.
+
+
+       ${SB_MODULE_NAME}
+            Substitution performed for installation  prefix  and  all  of  the
+            above elements. The value of ``${SB_MODULE_NAME}'' is the value of
+            the ``name'' attribute of the ``<module>'' element.
+
+
+       ${SB_PROG_NAME}
+            Substitution performed for installation  prefix  and  all  of  the
+            above  elements.  The value of ``${SB_PROG_NAME}'' is the ``name''
+            attribute of the ``<program>'' element.
+
+
+       ${SB_PROG_VER}
+            Substitution performed for installation  prefix  and  all  of  the
+            above  elements.  The  vaule  of  ``${SB_PROG_VER}'' is either the
+            ``version'' attribute of the ``<program>'' element or  the  ``ver‐
+            sion'' attribute of the ``<depend>'' element.
+
+
+PREPROCESSING
+       Prior  to  being read, the XML file is preprocessed by GPP, the Generic
+       Preprocessor by Denis Auroux  <auroux@math.polytechnique.fr>.  This  is
+       done  to  allow one XML file for various configurations. During prepro‐
+       cessing, the following variables are available:
+
+
+       SB_PP_DIST
+            Current distribution. The ${SB_DIST} variable  contains  the  same
+            value as this variable.
+
+
+       SB_PP_SYSTYPE
+            Result  of  /opt/TWWfsw/sbutils13/lib/systype (or a custom systype
+            script if the ``systype-path'' configuration variable is set). The
+            ${SB_SYSTYPE} variable contains the same value as this variable.
+
+
+DEPENDENCIES
+       Dependencies are handled by the following section from the DTD:
+           <!ELEMENT dependencies (depend*)>
+           <!ATTLIST dependencies
+             replace                       CDATA           '1'>
+           <!ELEMENT depend (#PCDATA)>
+           <!ATTLIST depend
+             add-path                      CDATA           #IMPLIED
+             append                        CDATA           #IMPLIED
+             group                         CDATA           #IMPLIED
+             install-base                  CDATA           #IMPLIED
+             install-name                  CDATA           #IMPLIED
+             lib-search-path-components    CDATA           #IMPLIED
+             module                        CDATA           #IMPLIED
+             path                          CDATA           #IMPLIED
+             progname                      CDATA           #IMPLIED
+             program                       CDATA           #IMPLIED
+             require                       CDATA           '1'
+             set-var-only                  CDATA           #IMPLIED
+             state                         (unpack
+                                           | configure
+                                           | build
+                                           | install
+                                           | test)         'install'
+             systype                       CDATA           #IMPLIED
+             type                          (build
+                                           | run)          'run'
+             user                          CDATA           #IMPLIED
+             var                           CDATA           #IMPLIED
+             var-substitute                CDATA           '1'
+             version                       CDATA           #IMPLIED>
+
+       Unless ``var-substitute'' is set, variable substitution is performed on
+       the dependency value and the dependency value is used when substituting
+       ``${SB_INSTALL_NAME}''. The version attribute is used when substituting
+       ``${SB_PROG_VER}''.
+
+       Dependencies are enforced for users, groups, and modules.
+
+       User/group dependencies are specified as follows:
+           <?xml version="1.0"?>
+           <programs>
+             <program name="httpd" version="2.2.13">
+               ...
+
+               <dependencies>
+                 <!-- Hardcoded "www" user/group -->
+                 <depend user="www"/>
+                 <depend group="www"/>
+               </dependencies>
+
+       Module dependencies fall into one of three categories. In  most  cases,
+       entries  in  the  build  or install database are searched to locate the
+       dependency matching the criteria specified.
+
+         1. Depend on a version of a program matching a specific version  cri‐
+         teria.
+             <?xml version="1.0"?>
+             <programs>
+               <program name="OpenSP" version="1.5.1">
+                 ...
+
+                 <dependencies>
+                   <depend program="gcc">v==4.2.4</depend>
+                   <depend program="perl"
+                     add-path="prepend">v&gt;=5.8.8</depend>
+                 </dependencies>
+
+         In  the above example, the installation database will be searched for
+         a program matching the name "gcc" and matching the  version  "4.2.4".
+         The  installation database will also be searched for a program match‐
+         ing the name "perl" and the most recent version greater than or equal
+         to  version "5.8.8". Because ``add-path="prepend"'' is specified, the
+         path to the binaries found for program "perl" will  be  prepended  to
+         $PATH.  The  installation  database  is specified unless an alternate
+         state is specified (the default  being  "install").  A  non-"install"
+         state searches the build database.
+
+         2.  Depend on a version of a program matching a specific version cri‐
+         teria and a specific installation name.
+             <?xml version="1.0"?>
+             <programs>
+               <program name="OpenSP" version="1.5.1">
+                 ...
+
+                 <dependencies>
+                   <depend program="gettext" var="GETTEXT"
+                     install-name="gettext017"
+                     add-path="prepend">v&gt;=0.17</depend>
+                   <depend program="libiconv" var="LIBICONV"
+                     install-name="libiconv112" add-path="prepend"
+                     systype="!*-aix*">v&gt;=1.12</depend>
+                 </dependencies>
+
+         In the above example, the installation database will be searched  for
+         a program matching the name "gettext", matching the installation name
+         "gettext017", and the most recent version greater than  or  equal  to
+         "0.17".  Because ``add-path="prepend"'' is specified, the path to the
+         binaries found for program "gettext" will be prepended to $PATH.  The
+         installation  database  will  also be searched for a program matching
+         the name "libiconv", matching the  installation  name  "libiconv112",
+         the  most  recent version greater than or equal to "1.12", and if the
+         system is not AIX. Because ``add-path="prepend"'' is  specified,  the
+         path  to  the binaries found for program "libiconv" will be prepended
+         to $PATH.
+
+         The ``install-name'' attribute is important depending on how programs
+         are  installed.  If  programs are installed with an installation name
+         matching the major version (``libiconv112'' for all versions of libi‐
+         conv-1.12.x,  ``gettext017''  for  all  versions  of gettext-0.17.x),
+         specifying the  ``install-name''  attribute  provides  an  additional
+         restriction  when  matching  a  dependency.  If  the ``install-name''
+         attribute was not specified above and libiconv-1.12 and libiconv-1.13
+         were installed, the 1.13 version of libiconv would have been selected
+         because 1.13 >  1.12  even  though  libiconv-1.12  installs  with  an
+         installation  name of ``libiconv112'' and libiconv-1.13 installs with
+         an installation name of ``libiconv113''.
+
+         3. Depend on a path.
+             <?xml version="1.0"?>
+             <programs>
+               <program name="OpenSP" version="1.5.1">
+                 ...
+
+                 <dependencies>
+                   <depend var="GCC_RT" install-name="gcc42r"
+                     systype="*-hpux10*"/>
+                   <depend var="GCC_RT" install-name="gcc42r"
+                     systype="*-aix*|*-hpux11*|*-irix*|*-osf*|*-solaris*"/>
+                   <depend var="PERL" path="/opt/perl5"/>
+                 </dependencies>
+
+         In the above example, the ``GCC_RT'' variable  is  set  to  the  path
+         specified  by  the installation name ``gcc42r'' on HP-UX 10.x and the
+         ``GCC_RT'' variable is set to the path specified by the  installation
+         name  ``gcc42r'' on non HP-UX 10.x hosts. The path must exist for the
+         dependency to be met. If the path does not  exist  and  the  variable
+         must be set, ``set-var-only="1"'' must be used.
+
+         In   the   ``path''   example,   the  ``PERL''  variable  is  set  to
+         ``/opt/perl5''.   When   the   ``path''   attribute   is   specified,
+         ``set-var-only="1"''  is  automatically  set  and, if the ``program''
+         attribute is specified, it is unset.
+
+       The following attributes are supported by the ``<depend>'' element:
+
+       add-path="[append|prepend]"
+            If the program specified contains binaries, either  ``append''  or
+            ``prepend'' the path for the binaries to $PATH.
+
+
+       append="path"
+            Append ``path'' to the dependency installation prefix.
+
+
+       group="value"
+            Group name required for operation.
+
+
+       install-base="path"
+            Override  default  installation  base.  Useful  if  dependency  is
+            installed in a directory outside of the default installation  base
+            directory.
+
+
+       install-name="path"
+            Set    installation    name    to   ``path''   when   substituting
+            ``${INSTALL_NAME}''.
+
+
+       module="value"
+            Require a certain installation (configure, build,  test,  install)
+            for a module.
+
+
+       path="value"
+            Rather  than  compose  the path based on the installation base and
+            installation name,  an  absolute  path  is  specified.  When  set,
+            ``set-var-only="1"''  is set automatically and, if the ``program''
+            attribute is specified, it is unset.
+
+
+       program="value"
+            Require a certain installation (configure, build,  test,  install)
+            for   a   module.   Generally   used   with   build   dependencies
+            (``state="build"'').
+
+
+       replace="[0|1]"
+            This attribute is set to "1" by default. If set to 0, the contents
+            of  the  global  <dependency>  is prepended to the module-specific
+            <dependency>.
+
+
+       require="[0|1]"
+            Dependencies by default require the installation prefix to  exist.
+            When  ``require="0"'',  the  installation  prefix does not have to
+            exist.  However, if the installation prefix is set,  the  environ‐
+            ment variable specified with the ``var'' attribute is not set. See
+            the ``set-var-only'' attribute for information on overriding this.
+
+
+       set-var-only="[0|1]"
+            When the installation prefix does not exist,  ``set-var-only="1"''
+            will  set  the  environment  variable  specified  with the ``var''
+            attribute.    When    ``set-var-only="1"'',     the     additional
+            ``${VAR}_INC''  and  ``${VAR}_LIB''  environment variables are not
+            set.
+
+
+       state="[unpack|configure|build|test|install]"
+            Currently unsupported. Requires program to be in a specific state.
+            sb saves the state in either the build or installation database as
+            each section is executed.
+
+
+       systype="value"
+            Limit dependency to specific architectures. Multiple architectures
+            can  be  specified separating them with "|". The architecture name
+            uses shell globbing and follows the GNU triplet naming convention.
+            The negation operator, "!", can be used to specify an architecture
+            to exclude.
+
+
+       type="[build|run]"
+            Records whether or not the dependency is required to ``build'' the
+            program  or ``run'' the program. A program cannot be removed while
+            it has ``run''-type dependencies dependent on it unless  --ignore‐
+            deps is given.
+
+
+       user="value"
+            User name required for operation.
+
+
+       var="var"
+            Sets  the environment variable $VAR to the installation prefix. If
+            the installation prefix  contains  include  files  and  libraries,
+            $VAR_INC  is  set  to  the  absolute path of the include files and
+            $VAR_LIB is set to the absolute path of the library files.
+
+
+       var-substitute="[0|1]"
+            Disallow variable substitution covered in the  VARIABLE  SUBSTITU‐
+            TION   section   when   ``var-substitute="0"''.   The  default  is
+            ``var-substitute="1"''.  When   variable   substitution   is   not
+            enforced,  the  dependency  value  is appended to the installation
+            base.
+
+
+       version="ver"
+            Used as the  value  when  replacing  ``${VER}''  when  calculating
+            dependency installation prefix.
+
+
+NOTES
+       Important  program  notes  can  be  embedded  in  the XML file with the
+       "<notes>" element. These notes can be changelog information relative to
+       previous   versions,   notes  specific  to  building,  configuring,  or
+       installing the program, or platform notes specific to an  architecture.
+       The "<notes>" element adheres to the following DTD:
+           <!ELEMENT notes (change*, note*, platform*)>
+           <!ATTLIST notes
+             name                          CDATA           #IMPLIED>
+           <!ELEMENT change (item | items | orderedlist | para |
+           screen | unorderedlist)*>
+           <!ATTLIST change
+             author                        CDATA           #IMPLIED
+             date                          CDATA           #IMPLIED
+             email                         CDATA           #IMPLIED
+             from                          CDATA           #IMPLIED
+             revision                      CDATA           #IMPLIED
+             to                            CDATA           #IMPLIED>
+           <!ELEMENT note (indent | orderedlist | para | screen |
+           unorderedlist)*>
+           <!ATTLIST note
+             type                          (build
+                                           | compilation
+                                           | configuration
+                                           | installation
+                                           | usage)        #REQUIRED>
+           <!ELEMENT platform (para | screen | orderedlist |
+           unorderedlist)*>
+           <!ATTLIST platform
+             name                          CDATA           #IMPLIED>
+           <!ELEMENT item (indent | para | screen | orderedlist |
+           unorderedlist)*>
+           <!ELEMENT items (para | item | orderedlist | screen |
+           unorderedlist)*>
+           <!ATTLIST items
+             name                          CDATA           #REQUIRED>
+           <!ELEMENT orderedlist (item+)>
+           <!ATTLIST orderedlist
+             start-num                     CDATA           '1'
+             type                          (decimal
+                                           | lower-alpha
+                                           | upper-alpha
+                                           | lower-roman
+                                           | upper-roman)  'decimal'>
+           <!ELEMENT para (#PCDATA | command | ulink)*>
+           <!ATTLIST para
+             align                         (left
+                                           | center
+                                           | right)        'left'
+             skip                          CDATA           #IMPLIED>
+           <!ELEMENT screen (#PCDATA)>
+           <!ELEMENT unorderedlist (item+)>
+           <!ELEMENT indent (indent | orderedlist | para | screen |
+           unorderedlist)*>
+           <!ELEMENT command (#PCDATA)>
+           <!ELEMENT ulink (#PCDATA)>
+           <!ATTLIST ulink
+             url                           CDATA           #REQUIRED>
+
+       The  top-level  element, "<notes>", can be followed by a changelog con‐
+       taining information about differences between previous releases of  the
+       program  and  the current version ("<change>"), general build, install,
+       or configuration notes ("<note>"), and platform-specific notes ("<plat‐
+       form>").
+
+       If  the .sb file contains multiple modules, multiple "<notes>" elements
+       can be specified with a name attribute used  to  differentiate  between
+       the notes:
+           <notes>
+             <change ...>
+               ...
+             </change>
+           </notes>
+
+           <notes name="DBD-pg">
+             <change ...>
+               ...
+             </change>
+           </notes>
+
+       Differences  documented  by specific versions using the "<change>" ele‐
+       ment are enumerated by  "<item>"  and  can  be  divided  into  multiple
+       "<items>"  if  documenting changes organized by modules in the program.
+       The GTK+ 2.4.4 changelog appears like:
+
+           <notes>
+             <change from="2.11.2" to="2.11.3">
+               <item><para>GtkBuilder: GTK+ supports constructing user
+           interfaces from XML descriptions now, similar to
+           libglade.</para></item>
+               <item><para>The new tooltip code now has convenience api to
+           set text tooltips: gtk_widget_set_tooltip_text(),
+           gtk_widget_set_tooltip_markup()</para></item>
+
+               <items name="GtkTextView, GtkEntry">
+                 <item><para>gtk_widget_modify_cursor() is a new function in
+           the gtk_widget_modify family to override the style-provided cursor
+           colors</para></item>
+                 <item><para>Use a block cursor in overwrite
+           mode</para></item>
+               </items>
+
+               <items name="GtkFileChooser">
+                 <item><para>Use xdg-user-dirs to find the Desktop
+           directory</para></item>
+                 <item><para>gtk_file_system_create() is now public
+           API</para></item>
+               </items>
+             </change>
+           </notes>
+
+       An "<item>" element is used to enumerate individual changes.  Depending
+       on   the   type  of  change,  the  "<orderedlist>",  "<unorderedlist>",
+       "<para>", and "<screen>" elements can be used to  properly  format  and
+       describe the change. The "<para>" element is generally used to describe
+       the change. However, to enumerate a list of changes for an  entry,  the
+       "<orderedlist>" and "<unorderedlist>" elements should be used. To docu‐
+       ment code examples or console examples, the "<screen>"  element  should
+       be used:
+
+           <notes>
+             ...
+             <change from="2.0.7" to="2.1.0">
+               <item><para>src/slrline.c: SLrline_bol/eol functions were
+           missing from the interface.</para></item>
+               <item><para>src/slarray.c: An optional reference argument may
+           be passed to the where function to get the complement indices.  That
+           is: <command>i = where (foo, &amp;j);</command> is equivalent to
+           <command>i = where (foo); j = where (not foo);</command></para></item>
+               <item><para>src/slexcept.c: SLerr_throw added to allow
+           applications to mimic the semantics of "throw".</para></item>
+               ...
+               <item><para>src/slang.c,slparse.c,slstruct.c: Added support
+           for "function-qualifiers", e.g,.</para>
+               <screen>
+           <![CDATA[
+           define plot_point (x, y)
+           {
+             set_color (qualifier ("color", "black"));
+                        .
+                        .
+           }
+           plot_point (2, 1; color="red");
+           ]]>
+               </screen>
+               <para>See docs for more info.</para></item>
+               <item><para>modules/png.sl: Added gmin and gmax qualifiers to
+           the png_gray_to_rgb function.</para></item>
+               <item><para>src/kwhash.c: New keywords: "ifnot" and "then".
+           The "ifnot" keyword plays the same role as "!if", except the use of
+           "!if" is deprecated. Then "then" keyword is used in looping constructs
+           as described in #17.</para></item>
+
+
+           Changes: v2.1.0 -> v2.1.1
+           -------------------------
+             ...
+              1. src/slrline.c: SLrline_bol/eol functions were missing from the
+                 interface.
+              2. src/slarray.c: An optional reference argument may be passed to
+                 the where function to get the complement indices.  That is: i
+                 = where (foo, &j); is equivalent to i = where (foo); j = where
+                 (not foo);
+              3. src/slexcept.c: SLerr_throw added to allow applications to
+                 mimic the semantics of "throw".
+              ...
+             14. src/slang.c,slparse.c,slstruct.c: Added support for
+                 "function-qualifiers", e.g,.
+                   define plot_point (x, y)
+                   {
+                     set_color (qualifier ("color", "black"));
+                                .
+                                .
+                   }
+                   plot_point (2, 1; color="red");
+
+                 See docs for more info.
+             15. modules/png.sl: Added gmin and gmax qualifiers to the
+                 png_gray_to_rgb function.
+             16. src/kwhash.c: New keywords: "ifnot" and "then". The "ifnot"
+                 keyword plays the same role as "!if", except the use of "!if"
+                 is deprecated. Then "then" keyword is used in looping
+                 constructs as described in #17.
+             ...
+
+           <notes>
+             <change from="4.4.20" to="4.5.20">
+               <items name="New Features">
+                 <item><para>A new event style notification</para></item>
+                 <item><para>Multi-Version Concurrency Control for the
+           Btree/Recno access methods</para></item>
+                 <item><para>A new replication framework with a default
+           TCP/IP setup</para></item>
+                 <item><para>A new port to the BREW platform (a cell phone
+           OS), not fully supported but ready for testing</para></item>
+                 <item><para>Several enhancements to the Java Collections API
+           including the implementation of the size() method</para></item>
+                 <item><para>Online replication upgrades for high
+           availability replicated 24/7 systems</para></item>
+               </items>
+               ...
+               <items name="Btree Access Method Changes">
+                 <item><para>Fix a bug that could cause a diagnostic
+           assertion by setting the deleted bit on a record in an internal node
+           [#13944]</para></item>
+                 <item><para>Fix 3 problems in BTREE compaction:
+           [#14238]</para>
+                 <unorderedlist>
+                   <item><para>When deleting a page don't check the next
+           key in the parent if we are going to delete the parent
+           too</para></item>
+                   <item><para>Need to check that the tree has not
+           collapsed between dropping a read lock and getting the write lock. It
+           is has collapsed we will fetch the root of the tree.</para></item>
+                   <item><para>Fix a case where we fail to lock the next
+           page before reading it</para></item>
+                 </unorderedlist></item>
+                 <item><para>Fix a bug that could cause the compaction of a
+           Btree with sorted duplicated to fail when attempting to compact an off
+           page duplicate tree if a key could not fit in an internal node
+           [#14771]</para></item>
+                 <item><para>Fix a bug that causes a loop if an empty Btree
+           was compacted [#14493]</para></item>
+               </items>
+
+             Changes: v4.4.20 -> v4.5.20
+             ---------------------------
+             (New Features)
+                 1. A new event style notification
+                 2. Multi-Version Concurrency Control for the Btree/Recno access
+                    methods
+                 3. A new replication framework with a default TCP/IP setup
+                 4. A new port to the BREW platform (a cell phone OS), not fully
+                    supported but ready for testing
+                 5. Several enhancements to the Java Collections API including
+                    the implementation of the size() method
+                 6. Online replication upgrades for high availability replicated
+                    24/7 systems
+             ...
+             (Btree Access Method Changes)
+                 1. Fix a bug that could cause a diagnostic assertion by setting
+                    the deleted bit on a record in an internal node [#13944]
+                 2. Fix 3 problems in BTREE compaction: [#14238]
+                    * When deleting a page don't check the next key in the
+                      parent if we are going to delete the parent too
+                    * Need to check that the tree has not collapsed between
+                      dropping a read lock and getting the write lock. It is has
+                      collapsed we will fetch the root of the tree.
+                    * Fix a case where we fail to lock the next page before
+                      reading it
+                 3. Fix a bug that could cause the compaction of a Btree with
+                    sorted duplicated to fail when attempting to compact an off
+                    page duplicate tree if a key could not fit in an internal
+                    node [#14771]
+                 4. Fix a bug that causes a loop if an empty Btree was compacted
+                    [#14493]
+
+       Platform-specific  notes  use the "<platform>" element. This is similar
+       to the "<note>" element except the "name" attribute contains the  plat‐
+       form  name  whereas with the "<note>" element the "type" attribute con‐
+       tains the note type ("build", "install", etc.). Items  in  "<platform>"
+       and   "<note>"  are  split  into  paragraphs  ("<para>")  and  optional
+       "<orderedlist>", "<screen>", and "<unorderedlist>"  elements,  as  fol‐
+       lows:
+           <platform name="Tru64 UNIX">
+             <para>For Ethereal to work, the kernel must be compiled to
+           support the packetfilter(7) pseudo-device driver. This is done by
+           adding the option '<command>options PACKETFILTER</command>' to your
+           kernel configuration file in <command>/sys/conf/[KERNEL
+           CONFIG]</command>. Once added, recompile the kernel with
+           new kernel. The packetfilter devices must be created as well:</para>
+             <screen>
+           $ /bin/su
+           # cd /dev
+           # ./MAKEDEV pfilt
+             </screen>
+
+           Platform notes: Tru64 UNIX
+           --------------------------
+           For Ethereal to work, the kernel must be compiled to support the
+           packetfilter(7) pseudo-device driver. This is done by adding the
+           option 'options PACKETFILTER' to your kernel configuration file in
+           /sys/conf/[KERNEL CONFIG]. Once added, recompile the kernel with
+           new kernel. The packetfilter devices must be created as well:
+             $ /bin/su
+             # cd /dev
+             # ./MAKEDEV pfilt
+
+           <note type="usage">
+             <para>The following GTK 2.12.x themes are available:</para>
+             <unorderedlist>
+               <item><para>Metal</para></item>
+               <item><para>Redmond95</para></item>
+               <item><para>ThinIce</para></item>
+               <item><para>XFce</para></item>
+             </unorderedlist>
+             ...
+
+           Usage notes:
+           ------------
+           The following GTK 2.12.x themes are available:
+           * Metal
+           * Redmond95
+           * ThinIce
+           * XFce
+
+       When  sb  --query=notes  is  run  to  print  the "<notes>" element, the
+       strings      "${SB_INSTALL_BASE}",      "${SB_INSTALL_NAME}",       and
+       "${SB_INSTALL_PREFIX}" are replaced with the program installation base,
+       installation name, and installation prefix, respectively, in  the  out‐
+       put.  This replacement does not occur when using gen-sb-db(1).  This is
+       done  for  the  purpose  of  embedding  the  program   notes   in   the
+       pkg-db.xml(4) file.
+
+
+CHANGELOG
+       A  changelog containing important differences beteween successive revi‐
+       sions of the XML file can be stored in the "<changelog>" element.  This
+       is different from the changelog in the "<notes>" element as it pertains
+       to the revisions of the XML file, not the program the  XML  file  docu‐
+       ments. The "<changelog>" element adheres to the following DTD:
+           <!ELEMENT changelog (change+)>
+           <!ELEMENT change (item | items | orderedlist | para |
+           screen | unorderedlist)*>
+           <!ATTLIST change
+             author                        CDATA           #IMPLIED
+             date                          CDATA           #IMPLIED
+             email                         CDATA           #IMPLIED
+             from                          CDATA           #IMPLIED
+             revision                      CDATA           #IMPLIED
+             to                            CDATA           #IMPLIED>
+           <!ELEMENT item (indent | para | screen | orderedlist |
+           unorderedlist)*>
+           <!ELEMENT items (para | item | orderedlist | screen |
+           unorderedlist)*>
+           <!ATTLIST items
+             name                          CDATA           #REQUIRED>
+           <!ELEMENT orderedlist (item+)>
+           <!ATTLIST orderedlist
+             start-num                     CDATA           '1'
+             type                          (decimal
+                                           | lower-alpha
+                                           | upper-alpha
+                                           | lower-roman
+                                           | upper-roman)  'decimal'>
+           <!ELEMENT para (#PCDATA | command | ulink)*>
+           <!ATTLIST para
+             align                         (left
+                                           | center
+                                           | right)        'left'
+             skip                          CDATA           #IMPLIED>
+           <!ELEMENT screen (#PCDATA)>
+           <!ELEMENT unorderedlist (item+)>
+           <!ELEMENT indent (indent | orderedlist | para | screen |
+           unorderedlist)*>
+           <!ELEMENT command (#PCDATA)>
+           <!ELEMENT ulink (#PCDATA)>
+           <!ATTLIST ulink
+             url                           CDATA           #REQUIRED>
+
+       Changes  are  documented using the top-level "<changelog>" element fol‐
+       lowed by as many "<change>" entries as their are revisions to  the  XML
+       file.  The  "<change>"  element  is the same as documented in the NOTES
+       section with the exception that the "from" and "to" attributes are  not
+       used.  Rather, the "author", "date", "email", and "revision" attributes
+       are used to document the author of the  change,  date  of  the  change,
+       email address of the author, and revision number the change applies to,
+       respectively.
+           <changelog>
+             <change date="2010 February 16" revision="3"
+             author="Albert Chin-A-Young" email="china@thewrittenword.com">
+               <item><para>Rebuild on HP-UX 11.31/PA without
+           +DAportable</para></item>
+             </change>
+
+             <change date="2010 February 10" revision="2"
+             author="Peter O'Gorman" email="pogma@thewrittenword.com">
+               <item><para>Rebuild without c99 library behavior on Solaris
+           10</para></item>
+             </change>
+           </changelog>
+             ...
+
+
+FUNCTIONS
+       Several functions are available for use in each section:
+
+       sb_msg_err "[message]"
+            Output message to stderr, usually as a result  of  an  error.  The
+            message will be output with each line prefixed by `sb: '. The fol‐
+            lowing example outputs an error if the "sudo" program is  unavail‐
+            able:
+
+           sudo -h 2>/dev/null || {
+             sb_msg_err "'sudo' program not found. Before teTeX can \
+           be configured, the ${SB_SRC_MACROS} file must be unpacked to \
+           ${SB_VAR_TETEXP}/texmf. 'sudo' is used to run the necessary \
+           commands as root because the configuration step is usually \
+           run as a non-root user. Please configure 'sudo' per the sb(1) \
+           manual and rerun."
+             exit 1
+           }
+
+
+PORTABILITY
+       Because  a  single ``sb-db.xml'' file is meant to encapsulate the build
+       procedure for multiple platforms,  certain  portability  issues  arise,
+       such  as  different  options  to  programs  like  ``chgrp'', ``chown'',
+       ``install'', ``tar'', etc. Because of this, the GNU  version  of  these
+       tools  are preferred. The following variables should be used in lieu of
+       their local counterparts. The variables contain the full  path  to  the
+       corresponding GNU command.
+
+
+       SB_PATH_AWK
+            The absolute path to the GNU ``awk'' command.
+
+            SB_PATH_CHGRP The absolute path to the GNU ``chgrp'' command.
+
+
+       SB_PATH_CHOWN
+            The absolute path to the GNU ``chown'' command.
+
+
+       SB_PATH_CHMOD
+            The absolute path to the GNU ``chmod'' command.
+
+
+       SB_PATH_CPIO
+            The absolute path to the GNU ``cpio'' command.
+
+
+       SB_PATH_EGREP
+            The absolute path to the GNU ``egrep'' command.
+
+
+       SB_PATH_FIND
+            The absolute path to the GNU ``find'' command.
+
+
+       SB_PATH_INSTALL
+            The absolute path to the GNU ``install'' command.
+
+
+       SB_PATH_LN
+            The absolute path to the GNU ``ln'' command.
+
+
+       SB_PATH_SED
+            The absolute path to the GNU ``sed'' command.
+
+
+       SB_PATH_TAR
+            The absolute path to the GNU ``tar'' command.
+
+
+       SB_PATH_TOUCH
+            The absolute path to the GNU ``touch'' command.
+
+
+       SB_PATH_SB
+            The absolute path to the ``sb'' command.
+
+
+ACTION ELEMENTS
+       The  sb  tool  performs various actions on source files or the unpacked
+       source files. The ``<sources>'' element defines the paths to the source
+       code  and  patches. Once the sources are unpacked, sb can be instructed
+       to configure, build, test, install, uninstall, and validate  the  soft‐
+       ware. Each "action" is embodied in a corresponding XML element.
+
+       All  action  scripts are run through the bash shell for portability. If
+       action scripts share common code, rather than duplicating the code  for
+       all action elements, it can be included in the ``<script-header>'' ele‐
+       ment which is automatically prepended to all action scripts.
+           <!ELEMENT script-header (#PCDATA)>
+           <!ATTLIST script-header
+             replace                       CDATA           '1'>
+
+       If ``replace="0"'' is specified for ``<script-header>'',  the  contents
+       of  the  global  <script-header>  is  prepended  to the module-specific
+       <script-header>.
+
+       The ``<configure>'' element defines the action to take before  building
+       the software. This typically involves running the GNU autoconf ``./con‐
+       figure'' script, the X ``xmkmf'' script, or editing a Makefile with the
+       correct settings for the build system. If no action is specified on the
+       command-line, this action is run by default.
+           <!ELEMENT configure (#PCDATA)>
+
+       The ``<build>'' element defines the action to take to build  the  soft‐
+       ware.  If this element is not specified, ``gmake'' is run. If no action
+       is specified on the command-line, this action is run by default.
+           <!ELEMENT build (#PCDATA)>
+
+       The ``<test>'' element defines the action to take to test the  software
+       after  the  ``<build>'' action is run. If no action is specified on the
+       command-line to, this action is run by default. However, if  the  auto-
+       include element is set to 0 (auto-include="0"), the action will not run
+       by default.  When  auto-include="0",  this  action  must  be  specified
+       explicitly,  with  --test,  for the action to run.  Unlike other action
+       elements, this  element  can  contain  dependencies  specific  to  this
+       action.  This might be useful if the software required to test the pro‐
+       gram cannot be run because building the  dependencies  depends  on  the
+       existing  program.  In  this  case,  the software should be configured,
+       built, and installed as usual, followed by building and installing  the
+       dependencies,  and  then invoking ``sb --test'' on the original program
+       once the specific for the ``<test>'' element are installed.
+           <!ELEMENT test (#PCDATA | dependencies)*>
+           <!ATTLIST test
+             auto-include                  CDATA           '1'>
+
+       The ``<install>'' element defines the action to  take  to  install  the
+       software. If this element is not specified, ``gmake install'' is run.
+           <!ELEMENT install (#PCDATA)>
+
+       The  ``<purge>''  element  defines the action to take when removing the
+       source code. If this element is not specified, the default action is to
+       remove all files in the build prefix (${SB_BUILD_PREFIX}). This is typ‐
+       ically good enough as most programs support building in the same direc‐
+       tory  as  the source. When removing ${SB_BUILD_PREFIX} is not enough, a
+       custom ``<purge>'' entry must be created to remove both ${SB_BUILD_PRE‐
+       FIX} and other source files.
+           <!ELEMENT purge (#PCDATA)>
+
+       The  ``<uninstall>''  element  defines the action to take when removing
+       the installed software. If this element is not specified,  the  default
+       action   is   to   remove   all   files   in  the  installation  prefix
+       (${SB_INSTALL_PREFIX}). However, for programs that contain a daemon  to
+       be  started at system boot, various config files and log files might be
+       installed outside the installation prefix. Therefore, a custom ``<unin‐
+       stall>'' entry might be required to remove these files.
+
+       If  multiple programs install to the same installation prefix, removing
+       any one will remove all installed files in  addition  to  the  database
+       entry  for  the  program removed. However, the database entries for the
+       remaining programs will not have been removed. To remove the  secondary
+       entries,  a ``<remove-db-entry>'' element can be specified, following a
+       format similar to the ``<depend>'' element.
+           <!ELEMENT uninstall (#PCDATA | remove-db-entry)*>
+           <!ELEMENT remove-db-entry (#PCDATA)>
+           <!ATTLIST remove-db-entry
+             add-path                      CDATA           #IMPLIED
+             append                        CDATA           #IMPLIED
+             install-base                  CDATA           #IMPLIED
+             install-name                  CDATA           #IMPLIED
+             module                        CDATA           #IMPLIED
+             program                       CDATA           #IMPLIED
+             systype                       CDATA           #IMPLIED
+             version                       CDATA           #IMPLIED>
+
+       The ``<validate>'' element defines the action to take  when  validating
+       the  full  installation  of the software. Some ``sb-db.xml'' files have
+       multiple  ``<module>''  entries.  The  ``<validate>''  element  accepts
+       ``<depend>''  entries  specifying  which  modules  must be installed in
+       order for ``sb --validate'' to  succeed.  If  no  ``<validate>''  entry
+       exists,  a  ``<module name="default">'' entry in the installation data‐
+       base is sufficient for ``sb --validate'' to succeed.
+           <!ELEMENT validate (depend*)>
+           <!ELEMENT depend (#PCDATA)>
+           <!ATTLIST depend
+             add-path                      CDATA           #IMPLIED
+             append                        CDATA           #IMPLIED
+             group                         CDATA           #IMPLIED
+             install-base                  CDATA           #IMPLIED
+             install-name                  CDATA           #IMPLIED
+             lib-search-path-components    CDATA           #IMPLIED
+             module                        CDATA           #IMPLIED
+             path                          CDATA           #IMPLIED
+             progname                      CDATA           #IMPLIED
+             program                       CDATA           #IMPLIED
+             require                       CDATA           '1'
+             set-var-only                  CDATA           #IMPLIED
+             state                         (unpack
+                                           | configure
+                                           | build
+                                           | install
+                                           | test)         'install'
+             systype                       CDATA           #IMPLIED
+             type                          (build
+                                           | run)          'run'
+             user                          CDATA           #IMPLIED
+             var                           CDATA           #IMPLIED
+             var-substitute                CDATA           '1'
+             version                       CDATA           #IMPLIED>
+
+
+EXAMPLES
+       Compiling zlib-1.2.3 with shared/static  libraries  in  one  directory,
+       64-bit libraries for some platforms in the same directory, and the Perl
+       Compress::Raw::Zlib module in the same directory:
+           <?xml version="1.0"?>
+           <programs>
+             <program name="zlib" version="1.2.3">
+               <build-name>${SB_PROG_NAME}-${SB_PROG_VER}</build-name>
+
+               <install-name>libz12</install-name>
+
+               <sources>
+                 <source path="src/${SB_PROG_NAME}-${SB_PROG_VER}.tar.gz"/>
+                 <patch path="src/${SB_PROG_NAME}-${SB_PROG_VER}/"/>
+               </sources>
+
+               <test>
+           <![CDATA[
+           gmake check
+           ]]>
+               </test>
+
+               <module name="default">
+                 <validate>
+                   <depend program="zlib" module="64bit"
+                     systype="*-aix*|*-hpux11*|*-irix*|*-solaris2.[789]|*-solaris2.1?">v==1.2.3</depend>
+                   <depend program="zlib"
+                     module="Compress-Raw-Zlib-5.8.8">v==1.2.3</depend>
+                 </validate>
+
+                 <configure>
+           <![CDATA[
+           case "${SB_SYSTYPE}" in
+           *-aix*)
+             CC=xlc CFLAGS="-O2 -qro -qroconst -qmaxmem=-1 -qarch=ppc"
+             CC_LD_RT="-Wl,-blibpath:"
+             LDFLAGS="-Wl,-brtl -Wl,-blibpath:/usr/lib" ;;
+           ia64*-hpux*)
+             CC=cc CFLAGS="+O2 +Olit=all +Ofltacc +Oentrysched \
+           +Odataprefetch +Onolimit"
+             CC_LD_RT="-Wl,+b," ;;
+           *-hpux10*|*-hpux11.[01]*)
+             CC=cc CFLAGS="-Ae -z +O2 +Ofltacc +ESlit +DAportable \
+           +Oentrysched +Odataprefetch +Onolimit"
+             CC_LD_RT="-Wl,+s,+b," ;;
+           *-hpux*)
+             CC=cc CFLAGS="-z +O2 +Ofltacc +Olit=all +Oentrysched \
+           +Odataprefetch +Onolimit"
+             CC_LD_RT="-Wl,+s,+b," ;;
+           *-irix*)
+             CC=cc CFLAGS="-Wl,-woff,84 -Wl,-woff,85 -woff 1009,1429 \
+           -use_readonly_const -G0 -rdata_shared -DEBUG:optimize_space=ON \
+           -O2 -OPT:Olimit=0"
+             CC_LD_RT="-Wl,-rpath," ;;
+           i?86-redhat-linuxe3)
+             CFLAGS="-O2 -mcpu=pentiumpro -march=pentiumpro"
+             CC_LD_RT="-Wl,-rpath," ;;
+           i?86-redhat-linuxe[45]|i?86-suse-linuxe1?)
+             CFLAGS="-O2 -mtune=pentiumpro -march=pentiumpro"
+             CC_LD_RT="-Wl,-rpath," ;;
+           *-linux*)
+             CC_LD_RT="-Wl,-rpath," ;;
+           *-osf*)
+             CC=cc CFLAGS="-O2 -arch ev5 -ieee -msym -readonly_strings"
+             CC_LD_RT="-Wl,-rpath," ;;
+           i?86*-solaris*)
+             CC=cc CFLAGS="-mr -Qn -xstrconst -xO2 -xtarget=pentium4"
+             CC_LD_RT="-R" ;;
+           *-solaris2.[678])
+             CC=cc CFLAGS="-mr -Qn -xstrconst -xO2 -xtarget=ultra2 \
+           -xarch=v8plusa"
+             CC_LD_RT="-R" ;;
+           *-solaris*)
+             CC=cc CFLAGS="-mr -Qn -xstrconst -xO2 -xtarget=ultra2 \
+           -m32 -xarch=sparcvis"
+             CC_LD_RT="-R" ;;
+           esac
+
+           ${SHELL} ./configure CC="${CC:-gcc}" CFLAGS="${CFLAGS:--O2}" \
+           LDFLAGS="${LDFLAGS+${LDFLAGS}}" --enable-shared \
+           --enable-static --libdir=${SB_INSTALL_PREFIX_LIB} \
+           --mandir="${SB_INSTALL_PREFIX}/man" --disable-dependency-tracking \
+           --prefix=${SB_INSTALL_PREFIX}
+
+           ${SB_PATH_CHMOD} +x install-sh
+
+           ${SB_PATH_SED} -i -e "\
+           s!-Lbdir}!-L1 ${CC_LD_RT}1!;" zlib.pc
+           ]]>
+                 </configure>
+               </module>
+
+               <module name="64bit"
+               systype="*-aix*|*-hpux11*|*-irix*|*-solaris2.[789]|*-solaris2.1?">
+                 <script-header>
+           <![CDATA[
+           case "${SB_SYSTYPE}" in
+           *-aix*)
+             _libdir=lib/ppc64 ;;
+           ia64*-hpux*)
+             _libdir=lib/hpux64 ;;
+           *-hpux*)
+             _libdir=lib/pa20_64 ;;
+           *-irix*)
+             _libdir=lib64 ;;
+           i?86*-solaris*)
+             _libdir=lib/amd64 ;;
+           *-solaris*)
+             _libdir=lib/sparcv9 ;;
+           esac
+           ]]>
+                 </script-header>
+
+                 <configure>
+           <![CDATA[
+           case "${SB_SYSTYPE}" in
+           *-aix*)
+             CC=xlc CFLAGS="-O2 -q64 -qro -qroconst -qmaxmem=-1"
+             CC_LD_RT="-Wl,-blibpath:"
+             LDFLAGS="-Wl,-brtl -Wl,-blibpath:/usr/lib" ;;
+           ia64*-hpux*)
+             CC=cc CFLAGS="+O2 +Olit=all +Ofltacc +Oentrysched +DD64 \
+           +Odataprefetch +Onolimit"
+             CC_LD_RT="-Wl,+b," ;;
+           *-hpux*)
+             CC=cc CFLAGS="+O2 +Olit=all +Ofltacc +Oentrysched +DD64 \
+           +Odataprefetch +Onolimit"
+             CC_LD_RT="-Wl,+s,+b,"
+
+             case "${SB_SYSTYPE}" in
+             *-hpux11.31)
+               ARGS="--build=hppa64-hp-hpux11.31" ;;
+             *-hpux11.23)
+               ARGS="--build=hppa64-hp-hpux11.23" ;;
+             *-hpux11.11)
+               ARGS="--build=hppa64-hp-hpux11.11" ;;
+             *-hpux11*)
+               ARGS="--build=hppa64-hp-hpux11.00" ;;
+             esac ;;
+           *-irix*)
+             CC=cc CFLAGS="-Wl,-woff,84 -Wl,-woff,85 -woff 1009,1429 \
+           -use_readonly_const -G0 -rdata_shared -DEBUG:optimize_space=ON \
+           -64 -mips4 -O2 -OPT:Olimit=0"
+             CC_LD_RT="-Wl,-rpath," ;;
+           i?86*-solaris*)
+             CC=cc CFLAGS="-mr -Qn -xstrconst -xO2 -xtarget=opteron \
+           -xarch=amd64"
+             CC_LD_RT="-R" ;;
+           *-solaris*)
+             CC=cc CFLAGS="-mr -Qn -xstrconst -xO2 -xtarget=generic \
+           -xarch=v9"
+             CC_LD_RT="-R" ;;
+           esac
+
+           ${SHELL} ./configure CC="${CC:-gcc}" CFLAGS="${CFLAGS:--O2}" \
+           LDFLAGS="${LDFLAGS+${LDFLAGS}}" --enable-shared \
+           --enable-static --libdir="${SB_INSTALL_PREFIX}/${_libdir}" \
+           --mandir="${SB_INSTALL_PREFIX}/man" ${ARGS+${ARGS}} \
+           --prefix=${SB_INSTALL_PREFIX}
+
+           ${SB_PATH_CHMOD} +x install-sh
+
+           ${SB_PATH_SED} -i -e "\
+           s!-Lbdir}!-L1 ${CC_LD_RT}1!;" zlib.pc
+           ]]>
+                 </configure>
+
+                 <install>
+           <![CDATA[
+           if [ ! -d ${SB_INSTALL_PREFIX}/lib/64 ]; then
+             case "${SB_SYSTYPE}" in
+             *-aix*|*-hpux*|*-solaris*)
+               ln -s ./$(basename ${_libdir}) ${SB_INSTALL_PREFIX}/lib/64 ;;
+             *-irix*)
+               ln -s ../lib64 ${SB_INSTALL_PREFIX}/lib/64 ;;
+             esac
+           fi
+
+           gmake install-libLTLIBRARIES install-pkgconfigDATA
+           ]]>
+                 </install>
+
+                 <uninstall>
+           <![CDATA[
+           rm -rf ${SB_INSTALL_PREFIX}/lib/64 ${SB_INSTALL_PREFIX}/${_libdir}
+           ]]>
+                 </uninstall>
+               </module>
+
+               <module name="Compress-Raw-Zlib-5.8.8">
+                 <build-name>Compress-Raw-Zlib-2.019</build-name>
+
+                 <sources>
+                   <source path="src/Compress-Raw-Zlib-2.019.tar.gz"/>
+                 </sources>
+
+                 <dependencies>
+                   <depend program="gcc" install-name="gcc42"
+                     add-path="prepend">v&gt;=4.2.4</depend>
+                   <depend program="perl" var="PERL">v==5.8.8</depend>
+                   <depend program="zlib" var="LIBZ">v==1.2.3</depend>
+                 </dependencies>
+
+                 <script-header>
+           <![CDATA[
+           _install_prefix="${SB_INSTALL_PREFIX_LIB}/perl588"
+           ]]>
+                 </script-header>
+
+                 <configure>
+           <![CDATA[
+           cat >config.in <<_EOT_
+           BUILD_ZLIB   = False
+           INCLUDE      = ${SB_VAR_LIBZ_INC}
+           LIB          = ${SB_VAR_LIBZ_LIB}
+           OLD_ZLIB     = False
+           GZIP_OS_CODE = AUTO_DETECT
+           _EOT_
+
+           ${SB_VAR_PERL}/bin/perl Makefile.PL \
+           INSTALLARCHLIB=${_install_prefix} \
+           INSTALLSITEARCH=${_install_prefix} \
+           INSTALLSITELIB=${_install_prefix} \
+           PREFIX=${SB_INSTALL_PREFIX}
+           ]]>
+                 </configure>
+
+                 <test>
+           <![CDATA[
+           gmake test
+           ]]>
+                 </test>
+
+                 <install>
+           <![CDATA[
+           gmake install
+
+           rm ${_install_prefix}/perllocal.pod
+
+           # install path for Perl's include.paths.d
+           ${SB_PATH_INSTALL} -m 755 -o root -g 0 -d \
+           ${_install_prefix}/include.paths.d
+           cat >${_install_prefix}/include.paths.d/99-${SB_PROG_NAME} <<_EOT_
+           ${_install_prefix}
+           _EOT_
+           ]]>
+                 </install>
+
+                 <uninstall>
+           <![CDATA[
+           rm -rf ${_install_prefix}
+
+           rm ${SB_INSTALL_PREFIX}/man/man3/Compress::Raw::Zlib.3
+           ]]>
+                 </uninstall>
+               </module>
+             </program>
+           </programs>
+
+       <validate> entry for kde-3.5.10:
+           <module name="default">
+             <validate>
+               <depend program="kde" module="arts">v==3.5.10</depend>
+               <depend program="kde" module="kdelibs">v==3.5.10</depend>
+               <depend program="kde" module="kdebase">v==3.5.10</depend>
+               <depend program="kde" module="kdegraphics">v==3.5.10</depend>
+               <depend program="kde" module="kdenetwork">v==3.5.10</depend>
+               <depend program="kde" module="kdeutils">v==3.5.10</depend>
+               <depend program="kde" module="kdeadmin">v==3.5.10</depend>
+               <depend program="kde" module="kdeartwork">v==3.5.10</depend>
+               <depend program="kde" module="kdepim">v==3.5.10</depend>
+               <depend program="kde" module="kdesdk">v==3.5.10</depend>
+               <depend program="kde" module="kdevelop"
+                 systype="*-aix*|*-linux*|*-solaris*|hppa*-hpux*">v==3.5.10</depend>
+               <depend program="kde" module="kdewebdev">v==3.5.10</depend>
+               <depend program="kde" module="kde-i18n-da">v==3.5.10</depend>
+               <depend program="kde" module="kde-i18n-de">v==3.5.10</depend>
+               <depend program="kde" module="kde-i18n-en_GB">v==3.5.10</depend>
+               <depend program="kde" module="kde-i18n-fr">v==3.5.10</depend>
+               <depend program="kde" module="kde-i18n-uk">v==3.5.10</depend>
+             </validate>
+           </module>
+
+       <uninstall> entry for kde-3.5.10 which consists of non-default  modules
+       (the  "default" module is used to uninstall kde when ``sb --uninstall''
+       kde-3.5.10" is invoked):
+           <module name="default">
+             <uninstall>
+           <![CDATA[
+           rm -rf ${SB_INSTALL_PREFIX}
+           ]]>
+             </uninstall>
+           </module>
+
+       <uninstall> entry for gcc-4.2.4 to remove the GCC  installation  prefix
+       (${SB_INSTALL_PREFIX}), the GCC runtime directory (${SB_VAR_GCC_RT} set
+       in the <dependencies> section, not shown), and to remove  the  binutils
+       entry for the gcc-4.2.4 module:
+           <uninstall>
+             <remove-db-entry program="binutils"
+               module="gcc-4.2.4">v==2.18</remove-db-entry>
+           <![CDATA[
+           rm -rf ${SB_INSTALL_PREFIX} ${SB_VAR_GCC_RT}
+           ]]>
+           </uninstall>
+
+       <test> entry for gcc-4.2.4 with an action-specific <dependencies> entry
+       for the Dejagnu test framework:
+           <test auto-include="0">
+             <dependencies>
+               <depend program="dejagnu" var="DEJAGNU"
+                 install-name="dejagnu14"
+                 add-path="prepend">v&gt;=1.4.4</depend>
+               <depend program="expect" install-name="expect54"
+                 add-path="prepend">v&gt;=5.43</depend>
+             </dependencies>
+           <![CDATA[
+           _dejagnu_datadir="${SB_VAR_DEJAGNU}/share"
+
+           (cd ${SB_BUILD_PREFIX}-objdir
+            DEJAGNULIBS=${_dejagnu_datadir} gmake -k check)
+           ]]>
+           </test>
+
+
+FILES
+       /opt/TWWfsw/sbutils13/share/sb-db.dtd
+                           DTD
+
+
+SEE ALSO
+       depot-db.xml(4), sb(1)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                               2010 February 19                   sb-db.xml(4)

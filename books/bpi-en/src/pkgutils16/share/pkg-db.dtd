@@ -1,0 +1,92 @@
+<!ELEMENT packages (package+)>
+<!ELEMENT package (description?, licenses*, notes*, package-manager+)>
+<!ATTLIST package
+  name		CDATA		#REQUIRED
+  version	CDATA		#REQUIRED>
+<!ELEMENT description (#PCDATA)>
+<!ATTLIST description
+  attribution	CDATA		#IMPLIED>
+<!ELEMENT licenses (para*, license+)>
+<!ELEMENT license (indent | orderedlist | para | screen | unorderedlist)*>
+<!ATTLIST license
+  module	CDATA		#IMPLIED
+  path		CDATA		#IMPLIED>
+<!ELEMENT notes (change*, note*, platform*)>
+<!ATTLIST notes
+  name		CDATA		#IMPLIED>
+<!ELEMENT note (indent | orderedlist | para | screen | unorderedlist)*>
+<!ATTLIST note
+  type		(build
+		| compilation
+		| configuration
+		| installation
+		| usage)	#REQUIRED>
+<!ELEMENT indent (indent | orderedlist | para | screen | unorderedlist)*>
+<!ELEMENT platform (para | screen | orderedlist | unorderedlist)*>
+<!ATTLIST platform
+  name		CDATA		#IMPLIED>
+<!ELEMENT changelog (change+)>
+<!ELEMENT change (item | items | orderedlist | para | screen | unorderedlist)*>
+<!ATTLIST change
+  author	CDATA		#IMPLIED
+  date		CDATA		#IMPLIED
+  email		CDATA		#IMPLIED
+  from		CDATA		#IMPLIED
+  revision	CDATA		#IMPLIED
+  to		CDATA		#IMPLIED>
+<!ELEMENT items (para | item | orderedlist | screen | unorderedlist)*>
+<!ATTLIST items
+  name          CDATA           #IMPLIED>
+<!ELEMENT item (indent | para | screen | orderedlist | unorderedlist)*>
+<!ELEMENT para (#PCDATA | command | ulink)*>
+<!ATTLIST para
+  align		(left
+		| center
+		| right)	"left"
+  skip		CDATA		#IMPLIED>
+<!ELEMENT command (#PCDATA)>
+<!ELEMENT ulink (#PCDATA)>
+<!ATTLIST ulink
+  url		CDATA		#REQUIRED>
+<!ELEMENT screen (#PCDATA)>
+<!ELEMENT orderedlist (item+)>
+<!ATTLIST orderedlist
+  start-num	CDATA           "1"
+  type				(decimal
+				| lower-alpha
+				| upper-alpha
+				| lower-roman
+				| upper-roman)  "decimal">
+<!ELEMENT unorderedlist (item+)>
+<!ELEMENT package-manager (datetime?, install-name, pkgname-base,
+version, revision?, subpkg+, replace*, changelog?, data?)>
+<!ATTLIST package-manager
+  name		CDATA		#REQUIRED>
+<!ELEMENT datetime (#PCDATA)>
+<!ATTLIST datetime
+  type		CDATA		#REQUIRED>
+<!ELEMENT install-name (#PCDATA)>
+<!ELEMENT pkgname-base (#PCDATA)>
+<!ELEMENT version (#PCDATA)>
+<!ELEMENT revision (#PCDATA)>
+<!ELEMENT data (#PCDATA)>
+<!ATTLIST data
+  checksum	CDATA		#REQUIRED
+  checksum-type	CDATA		#REQUIRED
+  encoding	CDATA		#REQUIRED
+  filename	CDATA		#REQUIRED
+  size		CDATA		#REQUIRED>
+<!ELEMENT subpkg (version?, revision?, depend*)>
+<!ATTLIST subpkg
+  order		CDATA		"0"
+  pkgname-ext	CDATA		#REQUIRED
+  size		CDATA		"0"
+  type		CDATA		#REQUIRED>
+<!ELEMENT replace EMPTY>
+<!ATTLIST replace
+  pkgname-base	CDATA		#REQUIRED
+  install-name	CDATA		#REQUIRED>
+<!ELEMENT depend (#PCDATA)>
+<!ATTLIST depend
+  pkgname-base	CDATA		#REQUIRED
+  subpkg	CDATA		#REQUIRED>

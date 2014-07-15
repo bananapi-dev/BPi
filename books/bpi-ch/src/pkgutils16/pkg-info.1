@@ -1,0 +1,606 @@
+pkg-info(1)                                                                                          pkg-info(1)
+
+
+
+NAME
+       pkg-info - Obtain information on installed packages
+
+
+SYNOPSIS
+       pkg-info [-e|--arg=<arg>] [--check-sig] [-c|--config=<path>] [-s|--depot=<depot>] [-G|--dist=<dist>]
+                [-d|--dist-ver=<ver>] [-E|--egd-socket=<path>] [--global-pkg-db=<path>]
+                [--gpg-keyring-path=<path>] [-h|--help] [-b|--install-base=<path>] [-l|--link-listing=<type>]
+                [--list-package-names=<type>] [--local-depot=<depot>] [--login=<login>] [--npkg-db=<dir>]
+                [--password=<pass>] [--pkg-db=<dir>] [-f|--pkg-list=<path>] [-t|--pkg-type=<type>]
+                [-p|--print=<type>] [--proxy-host=<host>] [--proxy-login=<host>] [--proxy-password=<host>]
+                [-R|--root=<path>] [--rpm-db=<dir>] [--sftp-known-hosts-path=<path>]
+                [--sftp-private-key-path=<path>] [--subpkgs=<type>] [--systype=<arch>] [--tmpbasedir=<path>]
+                [--update-pkg-db] [--update-type=<type>] [-v|--verbose] [-V|--version]
+                [<package>[-<ver>[-<rev>]]|<pkg-archive> ...]
+
+
+DESCRIPTION
+       The pkg-info utility displays information on installed packages.  It indicates whether or not the package
+       is installed, what instances of the package are installed (runtine, info and man pages, online documenta‐
+       tion, and local configuration files), what links have been created for the package in the common bin, in‐
+       fo, and man directories, and the installation path component of the package.
+
+       Packages  are  specified  by package name or ``<pkg-archive>''. The package name provided as input is ex‐
+       pected to refer to a package in a depot specified with ``--depot'' or to a file on the local  filesystem.
+       If  the version and revision number are not specified, the most recent version of the package is selected
+       from the list of depots or the package database (if ``--depot'' was not specified). If the version number
+       is specified but the revision number is not, the most recent revision of the package is selected from the
+       list of depots or the package database.
+
+       By default, only those packages installed in the package database are checked.
+
+
+OPTIONS
+       -e, --arg <arg>
+            Additional arguments to pass to the package manager. Multiple instances of this option can  be  used
+            to  pass additional arguments, such as ``-a TWW'' (i.e. -e -a -e TWW) to Solaris pkgadd or ``--relo‐
+            cate xxx=yyy'' (i.e. -e --relocate -e xxx=yyy) to RPM. Each argument is passed as a quoted  argument
+            to the package manager.
+
+
+       --check-sig
+            Verify  the  GPG  signature  of  the  package  and the ``depot-db.xml'' and ``pkg-db.xml'' files. If
+            pkg-info does not find the ``gpg'' binary in the search path, installation will  fail.  If  the  GPG
+            signature  verification fails, execution will stop. Before using this option, the public key used to
+            sign the package must be present in your keyring. It is not necessary  for  the  public  key  to  be
+            signed for signature verification to work. However, it is recommended that you sign the public key.
+
+
+       -c, --config <path>
+            Alternate     path     to     configuration    file.    The    default    path    is    ``/opt/TWWf‐
+            sw/pkgutils16/etc/pkgutils.conf''.  The  format  of  the  configuration  file   is   documented   in
+            pkgutils.conf(4).   pkg-info  uses  the  following  variables  in  the  configuration file: npkg-db,
+            pkg-type, root, rpm-db.
+
+
+       -s, --depot <depot>
+            Software depot to search for packages. The path to the depot, ``<depot>'' is either a directory or a
+            URL.  The  following  methods are supported: ``file://'', ``ftp://'', ``http://'', ``https://'', and
+            ``sftp://''. Multiple software depots can be specified. Packages with dependencies do  not  need  to
+            have their dependencies available in the same depot. However, all instances of a package are expect‐
+            ed to be found in a given depot (thus, the man and runtime components of a package must exist in the
+            same  depot).  The  depot specified, <depot>, is the top-level path to the depot.  Through the depot
+            database file, ``depot-db.xml'', pkg-inst will descend into subdirectories of the depot  and  search
+            in these directories for additional packages. Any path with the packages must have the package data‐
+            base file, ``pkg-db.xml''. The format of the depot-db.xml file  is  documented  in  depot-db.xml(4).
+            The  format  of  the  pkg-db.xml  file  is  documented in pkg-db.xml(4).  Unlike chk-pkg-updates and
+            pkg-inst, the depots variable in the configuration file is not used. By  default,  pkg-info  queries
+            the local package database.
+
+
+       -G, --dist <dist>
+            Distribution  to  query  from. The default distribution is ``cd''. When specified, ``<dist>'' is ap‐
+            pended to the depot path. Also used to specify distribution-specific variables from  the  configura‐
+            tion file in ``dist-opts'' section.
+
+            -d, --dist-ver <ver> Distribution version to use when specifying a remote depot or a local reposito‐
+            ry that mirrors a remote depot. The distribution version matches the release number for the packages
+            to  install. The special keyword ``latest'' can be used to specify the most recent distribution ver‐
+            sion.
+
+
+       -E, --egd-socket <path>
+            Pathname to the socket the EGD/PRNGD daemons are listening on. This is needed only if the remote de‐
+            pot is being accessed through https and the platform does not have access to a /dev/random device.
+
+
+       --global-pkg-db <path>
+            Pathname  to global pkg-db.xml. The global pkg-db.xml file contains a list of all packages ever cre‐
+            ated. The default path is ``/opt/TWWfsw/pkgutils16/share/pkg-db.xml''.
+
+
+       --gpg-keyring-path <path>
+            Specifies the location of the GPG keyring. The usual location of the keyring is  ~/.gnupg.  However,
+            for  security reasons, we encourage use of a dedicated directory for the keyring. This option is re‐
+            quired if --check-sig is given.
+
+
+       -h, --help
+            Displays short description of program options and then exits the program.
+
+
+       -b, --install-base <dir>
+            Specify the installation base directory where the package has been installed. The default  value  is
+            ``/opt/TWWfsw''.  This option is needed only if the administrative ``basedir'' directory was changed
+            on Solaris (cf.  admin(4)).  If the --relocate option was given for RPM packages, pkg-info will  au‐
+            tomatically detect the relocated files by quering the RPM database.
+
+
+       -l, --link-listing <type>
+            Display  links  in  common  directories  that reference the given package.  A value of ``short'' for
+            <type> displays a summary of what packages have links in the common bin, info, and man  directories.
+            A  value  of  ``long'' for <type> displays a listing of all links installed in the common bin, info,
+            and man directories. Multiple instances of this option may be specified.
+
+
+       --list-package-names <type>
+            List package names only, either in the repository if specified in conjuction  with  --depot  or  in‐
+            stalled packages. Incompatible with --link-listing, --print, and --update-pkg-db. The output can ei‐
+            ther be the ``name'' for the package name, ``name-ver'' for the package name and version, or ``name-
+            ver-rev'' for the package name and version and revision.
+
+
+       --local-depot <depot>
+            Specifies  the  location  to a local directory to hold files retrieved from a remote repository. The
+            files in the local depot are never removed. As a result, ``<depot>'' can be used later with --depot.
+            If not specified, a temporary local depot is created and removed before pkg-info completes.
+
+
+       --login <login>
+            Login  for  a remote repository requiring authentication. For the ``ftp://'' method, a default login
+            id of ``anonymous'' is used when no login id is specified. For the ``http://''  method,  HTTP  BASIC
+            authentication is assumed.
+
+
+       --npkg-db <dir>
+            Path to Npkg database, if using the Npkg package management system.
+
+
+       --password <pass>
+            Password  for  a  remote repository requiring authentication. For the ``http://'' method, HTTP BASIC
+            authentication is assumed.
+
+
+       --pkg-db <path>
+            Path to database of installed packages. In addition to the list of packages maintained by the  pack‐
+            age management system, pkgutils maintains a list of packages installed with pkg-inst. This speeds up
+            pkg-info, and pkg-rm. A global package database was available in pkgutils  1.3.x  which  contains  a
+            list  of  all packages ever built and their dependencies. Unfortunately, this file must be read with
+            every invocation of chk-pkg-updates, pkg-info, or pkg-rm making startup  times  slow.  In  addition,
+            maintaining  this  file  for  every  package  ever built was unwieldy. If ``<path>'' is ''disable'',
+            pkg-db.xml entries are ignored.
+
+
+       -f, --pkg-list <file>
+            Read <file> for a list of packages. This option can be specified multiple times. Package entries are
+            specified one per line in <file>.
+
+
+       -t, --pkg-type <type>
+            Specify  an alternate package management system. If using the native package management system, this
+            is unnecessary. If this option is not specified, pkg-info automatically determines the package  man‐
+            agement system based on the platform it is running on. If using a non-native package management sys‐
+            tem such as Npkg or RPM, this option must be specified. The  available  <type>s  are  ``depot''  for
+            HP-UX  depot,  ``inst''  for  IRIX  inst, ``lpp'' for AIX, ``npkg'' for Npkg, ``pkgadd'' for Solaris
+            pkgadd, ``rpm' for RPM, and ``setld'' for Tru64 UNIX setld.
+
+
+       -p, --print <entry>
+            Displays information about a package. Possible string values for <entry> are: ``changelog'' to  dis‐
+            play package changelog (not the changelog for the program), ``dependencies'' to display dependencies
+            for the package, ``description'' to display a description of the package, ``install-path''  to  dis‐
+            play the installation path component for the package for the per-package configuration files located
+            in ``/etc/opt/TWWfsw/configs/file'', ``licenses'' to display the program license(s),  and  ``notes''
+            to display the program changelog and any notes specific to the program.
+
+
+       --proxy-host <host>
+            If  a  remote  repository is specified, use ``<host>'' as the proxy server if a proxy is required to
+            connect to remote site.
+
+
+       --proxy-login <login>
+            Login for a proxy server required to connect with a remote repository.  For the ``ftp://'' method, a
+            connection  is  initially made to the proxy host with the proxy login specified by ``<login>''. If a
+            login to the remote repository is specified, the command ``USER <login>@<repository>'' is issued  to
+            connect  to  the remote repository from the proxy server. If a login to the remote repository is not
+            specified, the command ``USER anonymous@<repository>'' is issued. If a password to the remote repos‐
+            itory  is  specified, the command `PASS <password>'' is issued to complete the connection to the re‐
+            mote repository from the proxy server. If a password to the remote repository is not specified,  the
+            command  ``PASS anonymous'' is issued.  For the ``http://'' method, HTTP BASIC authentication is as‐
+            sumed.
+
+
+       --proxy-password <pass>
+            If the proxy host requires HTTP BASIC authentication, use ``<pass>'' as the password.
+
+            -R, --root <path> Alternate root directory, as used when installing the package. This option is only
+            applicable  under IRIX, HP-UX, and Solaris, whose package management systems allow specifying an al‐
+            ternate root directory.
+
+
+       --rpm-db <dir>
+            Path to RPM database, if using the RPM package management system.
+
+
+       --sftp-known-hosts-path <path>
+            Path to ssh ``ssh_known_hosts'' file. When using the ``sftp://'' protocol for  remote  repositories,
+            remote hosts are authenticated against the RSA/DSA host keys in this file. Because the sftp protocol
+            implementation is done using the ``paramiko'' Python toolkit rather than interfacing  with  sftp(1),
+            the path to the ssh ``ssh_known_hosts'' file must be specified.
+
+
+       --sftp-private-key-path <path>
+            Path  to ssh private key file for password-less access to remote repository. The private key must be
+            created without a password as pkg-info does not prompt for passwords. The corresponding  public  key
+            file  must exist in the ``.ssh/authorized_keys'' file on the remote host for either the user running
+            pkg-info or for the user specified with ``--login'' option.
+
+
+       --subpkgs <type>
+            All components of a package are queried when no subpackage type is specified. The  available  compo‐
+            nent <type>s are ``conf'' for local configuration files, ``doc'' for online documentation, ``librun‐
+            time'' for the library runtime, ``man'' for GNU info and man pages, ``packages'' for 3rd-party pack‐
+            ages, and ``runtime'' for the runtime component.
+
+
+       -s, --systype <arch>
+            Architecture  type for packages to display. Multiple instances of this option are supported. The ar‐
+            chitecture type ``all'' represents all architectures, if using the Npkg package management system.
+
+
+       --tmpbasedir <path>
+            Temporary base directory to use when creating temporary files. Needed when package payload  too  big
+            for  default  temporary directory (/tmp or /var/tmp). The TMPDIR environment variable is set to this
+            path to propagate the use of the new temporary directory to the package management programs.
+
+
+       -v, --verbose
+            Provide more verbose diagnostics during program execution.
+
+
+       -V, --version
+            Display version number and exit.
+
+
+EXAMPLES
+       Displaying the list of texinfo packages installed on a Solaris host with the RPM  package  manager  using
+       the short common link listing format:
+         $ pkg-info --pkg-type=rpm --rpm-db=/var/tmp/db \
+         --link-listing=short texinfo
+         texinfo
+           checking if v4.13-1 installed (TWWtexinfo413) ... yes
+             installed instances ... TWWtexinfo413-doc TWWtexinfo413
+             TWWtexinfo413-man
+             searching for common links ... found
+           common links ...
+             bin: TWWtexinfo413
+             info: TWWtexinfo413-man
+             man: TWWtexinfo413-man
+
+       Displaying  the  list  of  texinfo  packages  installed on a Solaris host with the native package manager
+       (pkgadd) using the short common link listing format and printing the package description and list of  de‐
+       pendencies for a package:
+         $ pkg-info --link-listing=short --print=dependencies \
+         --print=description texinfo
+         texinfo
+           checking if v4.13-1 installed (TWWtexinfo413) ... yes
+             installed instances ... TWWtexinfo413d TWWtexinfo413u
+             TWWtexinfo413m
+             dependencies ...
+               TWWgettext017u [gettext] (v>=0.17, r>=1)
+             description ...
+               Texinfo is a documentation system that uses a single source
+               file to produce both online information and printed output.
+               Using texinfo, you can create a printed document with the
+               normal features of a book, including chapters, sections,
+               cross references, and indices. From the same texinfo source
+               file, you can create a menu-driven, on-line info file with
+               nodes, menus, cross references, and indices.
+             searching for common links ... found
+           common links ...
+             bin: TWWtexinfo413u
+             info: TWWtexinfo413m
+             man: TWWtexinfo413m
+
+       Remote  repositories can be displayed for package information similar to that obtain from the local pack‐
+       age database:
+           $ pkg-info --depot=http://updates.thewrittenword.com \
+           --dist-ver=latest --list-package-names=name-ver
+           GraphicsMagick-1.3.6
+           ImageMagick-6.4.7
+           OpenSP-1.5.1
+           Pyrex-0.9.6.4
+           Twisted-2.5.0
+           Xaw3d-1.5e
+           Xdialog-2.3.1
+           a2ps-4.14
+           abiword-2.8.1
+           aiksaurus-1.2.1
+           alpine-2.00
+           am-utils-6.1.5
+           ant-1.7.1
+           apg-2.2.3
+           apr-1.3.3
+           apr-util-1.3.4
+           asciidoc-8.3.5
+           aspell-0.60.6
+           atk-1.22.0
+           atlas-3.6.0
+
+           $ pkg-info --depot=http://updates.thewrittenword.com \
+           --dist-ver=latest --print=description --print=dependencies \
+           texinfo
+           texinfo
+             depot containing v4.13-1 of this package ...
+               http://updates.il.thewrittenword.com
+             instances ... TWW.texinfo413.doc TWW.texinfo413.rte
+             TWW.texinfo413.man
+             dependencies ...
+               TWW.gettext017.rte [gettext] (v>=0.17.0.1)
+             description ...
+               Texinfo is a documentation system that uses a single source
+               file to produce both online information and printed output.
+               Using texinfo, you can create a printed document with the
+               normal features of a book, including chapters, sections,
+               cross references, and indices. From the same texinfo source
+               file, you can create a menu-driven, on-line info file with
+               nodes, menus, cross references, and indices.
+
+       treated similar to a repository:
+           $ pkg-info --list-package-names=name-ver-rev \
+           autogen-5.9.7-1.depot.pkg-inst
+           autogen-5.9.7-1
+
+           $ pkg-info --print=description autogen-5.9.7-1.depot.pkg-inst
+           autogen
+             depot containing v5.9.7-1 of this package ...
+               file:///tmp/autogen-5.9.7-1.depot.pkg-inst
+             instances ... TWWagen59.TWWagen59-HELP TWWagen59.TWWagen59-RUN
+             TWWagen59.TWWagen59-MAN
+             description ...
+               AutoGen is a tool designed for generating program files that
+               contain repetitive text with varied substitutions. Its goal
+               is to simplify the maintenance of programs that contain
+               large amounts of repetitious text. This is especially
+               valuable if there are several blocks of such text that must
+               be kept synchronized. Output is specified with a
+               Scheme-enhanced output template. Input, if required by your
+               template, may come from AutoGen definitions, CGI data, or
+               XML files.
+
+           $ pkg-info --print=notes wireshark-1.0.10-2.depot.pkg-inst
+           wireshark
+             depot containing v1.0.10-2 of this package ...
+               file:///tmp/wireshark-1.0.10-2.depot.pkg-inst
+             instances ... TWWwires10.TWWwires10-RUN
+             TWWwires10.TWWwires10-MAN
+             program notes ...
+               Changes: v1.0.9 -> v1.0.10
+               --------------------------
+               (Security Fixes)
+                   1. The RADIUS dissector could crash
+                   2. The DCERPC/NT dissector could crash
+
+                 1. Updated Protocol Support: DCERPC NT, RADIUS
+
+               Changes: v1.0.8 -> v1.0.9
+               -------------------------
+               (Security Fixes)
+                   1. The AFS dissector could crash
+                   2. The Infiniband dissector could crash on some
+                      platforms
+                   3. The OpcUa dissector could use excessive CPU and
+                      memory
+
+               (Bug Fixes)
+                   1. Window "capture->Interfaces" cannot be closed
+                      (Bug 1740)
+                   2. Slow response when using Expert Info Composite
+                      (Bug 2504)
+                   3. tshark-1.0.2 (dumpcap) signal abort core saved
+                      (Bug 2767)
+                   4. Crash when applying a display filter (Bug 3361)
+                   5. Propagate interface Comment field to the Capture...
+                      Interfaces dialogue box (Bug 3414)
+                   6. Crash when searching for Time Reference (Bug 3429)
+                   7. Wireshark doesn't interpret "adsl" interface in
+                      snoop output of Juniper ScreenOS (Bug 3469)
+                   8. Wireshark start-up very slow when X forwarding
+                      over ssh (Bug 3483)
+               ...
+               Platform notes: HP-UX 11.00
+               ---------------------------
+               The latest LAN patch, PHNE_21217, should be installed.
+
+               Platform notes: Tru64 UNIX
+               --------------------------
+               For Ethereal to work, the kernel must be compiled to support
+               the packetfilter(7) pseudo-device driver. This is done by
+               adding the option 'options PACKETFILTER' to your kernel
+               configuration file in /sys/conf/[KERNEL CONFIG]. Once added,
+               recompile the kernel with 'doconfig -c [KERNEL CONFIG]' and
+               reboot to use the new kernel. The packetfilter devices must
+               be created as well:
+                 $ /bin/su
+                 # cd /dev
+                 # ./MAKEDEV pfilt
+
+               Finally, the interface you wish to listen on must be allowed
+               to enter promiscuous mode. This is done as follows:
+                 # /usr/sbin/pfconfig +promisc [INTERFACE]
+                 # /usr/sbin/pfconfig +copyall [INTERFACE]
+
+           $ pkg-info --print=changelog qt-3.3.8-2.depot.pkg-inst
+           qt
+             depot containing v3.3.8-2 of this package ...
+               file:///tmp/qt-3.3.8-2.depot.pkg-inst
+             instances ... TWWlibqt33.TWWlibqt33-HELP
+             TWWlibqt33.TWWlibqt33-RUN TWWlibqt33.TWWlibqt33-MAN
+             package changelog ...
+               Changelog: rev 2 -- 2008 December 18
+               ------------------------------------
+                 1. Update fcpackage dependency from 2.4 to 2.6
+                 2. Update libpng dependency from 1.2.18 to 1.2.29
+
+           $ pkg-info --print=licenses subversion-1.6.6-1.depot.pkg-inst
+           subversion
+             depot containing v1.6.6-1 of this package ...
+               file:///tmp/subversion-1.6.6-1.depot.pkg-inst
+             instances ... TWWsvn16.TWWsvn16-HELP TWWsvn16.TWWsvn16-RUN
+             TWWsvn16.TWWsvn16-MAN
+             program license ...
+               Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+
+               Redistribution and use in source and binary forms, with
+               or without modification, are permitted provided that the
+               following conditions are met:
+
+                   1. Redistributions of source code must retain the
+                      above copyright notice, this list of conditions
+                      and the following disclaimer.
+
+                   2. Redistributions in binary form must reproduce the
+                      above copyright notice, this list of conditions
+                      and the following disclaimer in the documentation
+                      and/or other materials provided with the distribution.
+
+                   3. The end-user documentation included with the
+                      redistribution, if any, must include the following
+                      acknowledgment: "This product includes software
+                      developed by CollabNet (http://www.Collab.Net)."
+                      Alternately, this acknowledgment may appear in the
+                      software itself, if and wherever such third-party
+                      acknowledgments normally appear.
+
+                   4. The hosted project names must not be used to
+                      endorse or promote products derived from this
+                      software without prior written permission. For
+                      written permission, please contact info@collab.net.
+
+                   5. Products derived from this software may not use
+                      the "Tigris" name nor may "Tigris" appear in their
+                      names without prior written permission of CollabNet.
+
+               THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR
+               IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+               IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+               PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+               COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+               INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+               CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+               PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+               DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+               CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+               CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+               OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+               SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+               This software consists of voluntary contributions made by
+               many individuals on behalf of CollabNet.
+
+             program license (Python bindings) ...
+               This is version 1 of this license. It is also available
+               online at http://subversion.tigris.org/license-for-python-bindings.html.
+               If newer versions of this license are posted there, you
+               may use a newer version instead, at your option.
+
+               The Python bindings for Subversion are distributed under
+               the following terms:
+
+                     I. Copyright (c) 2000-2009 CollabNet.  All rights
+                        reserved.
+
+                        Redistribution and use in source and binary
+                        forms, with or without modification, are
+                        permitted provided that the following conditions
+                        are met:
+
+                          1. Redistributions of source code must retain
+                             the above copyright notice, this list of
+                             conditions and the following disclaimer.
+
+                          2. Redistributions in binary form must
+                             reproduce the above copyright notice, this
+                             list of conditions and the following
+                             disclaimer in the documentation and/or
+                             other materials provided with the distribution.
+
+                          3. The end-user documentation included with
+                             the redistribution, if any, must include
+                             the following acknowledgment: "This product
+                             includes software developed by CollabNet
+                             (http://www.Collab.Net/)." Alternately,
+                             this acknowledgment may appear in the
+                             software itself, if and wherever such
+                             third-party acknowledgments normally appear.
+
+                          4. The hosted project names must not be used
+                             to endorse or promote products derived from
+                             this software without prior written
+                             permission. For written permission, please
+                             contact info@collab.net.
+
+                          5. Products derived from this software may not
+                             use the "Tigris" name nor may "Tigris"
+                             appear in their names without prior written
+                             permission of CollabNet.
+
+                        THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY
+                        EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT
+                        NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+                        MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+                        PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+                        COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+                        DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+                        EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+                        BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+                        GOODS OR SERVICES; LOSS OF USE, DATA, OR
+                        PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+                        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+                        IN CONTRACT, STRICT LIABILITY, OR TORT
+                        (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+                        ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+                        ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+                    II. Copyright (C) 2005 Edgewall Software
+
+                        All rights reserved.
+
+                        Redistribution and use in source and binary
+                        forms, with or without modification, are
+                        permitted provided that the following conditions
+                        are met:
+
+                          1. Redistributions of source code must retain
+                             the above copyright notice, this list of
+                             conditions and the following disclaimer.
+
+                          2. Redistributions in binary form must
+                             reproduce the above copyright notice, this
+                             list of conditions and the following
+                             disclaimer in the the documentation and/or
+                             other materials provided with the distribution.
+
+                          3. The name of the author may not be used to
+                             endorse or promote products derived from
+                             this software without specific prior
+                             written permission.
+
+                        THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS"
+                        AND ANY EXPRESS OR IMPLIED WARRANTIES,
+                        INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+                        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+                        PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+                        SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+                        INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+                        CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+                        LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+                        SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+                        BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+                        THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+                        LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+                        OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+                        THIS SOFTWARE, EVEN IF ADVISED OF THE
+                        POSSIBILITY OF SUCH DAMAGE.
+
+
+       pkg-links(1), pkg-inst(1), pkgutils.conf(4)
+
+
+FILES
+       /var/opt/TWWfsw/pkgutils16
+                           Default path for pkg-db.xml package database files (cf.  --pkg-db)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                2010 February 24                                     pkg-info(1)

@@ -1,0 +1,78 @@
+tjyang@tj1210:~/cpam/cpambook$ /opt/TWWfsw/bin/pkg-inst  --help
+pkg-inst: pkg-inst [options] [package ...]
+
+  -e, --arg=<arg>		Additional arguments to pass to package manager
+      --check-sig		Check GPG signature
+  -c, --config=<path>		Path to alternate configuration file
+  -s, --depot=<depot>		Location of software depot
+  -G, --dist=<dist>		Name of distribution to update
+  -d, --dist-ver=<ver>		Distribution version
+  -N, --dry-run			Dry run. Tell what would be done but do
+				not install any packages.
+  -E, --egd-socket=<path>	Path to EGD socket
+      --extract=<path>		Don't install but extract raw
+				packages to <path>
+      --gpg-keyring-path=<path>	Path to GPG public keyring
+  -h, --help			Output usage message then exit
+      --ignoredeps		Ignore package dependencies
+      --local-depot=<depot>	Path to local depot to store files
+				retrieved from remote depots
+      --login=<login>		Login for remote depot
+      --match-target=<option>	Restrict packages being updated to those
+				already installed. Match based on:
+				  name (package name)
+				  package (package instance)
+      --npkg-db=<dir>		Npkg database path
+      --password=<pass>		Password for remote depot
+      --pkg-db=<path>		Path to database of installed packages
+  -f, --pkg-list=<path>		Take list of packages from file <path>
+  -t, --pkg-type=<type>		Package type. Possible types are:
+				  depot inst lpp npkg pkgadd rpm setld
+      --proxy-host=<host:port>	Hostname and proxy of proxy server
+      --proxy-login=<login>	Login for proxy server
+      --proxy-password=<pass>	Password to proxy server
+      --reinstall		Reinstall package
+      --remove-prev-ver		Remove previous version of package if
+				it contains no dependents
+  -R, --root=<path>		Alternate root directory
+      --rpm-arch=<arch>		RPM architecture type. Possible types are:
+				  alpha (Tru64 UNIX 4.x, 5.x)
+				  i386 (Redhat Linux, RHEL/Intel)
+				  ia64 (HP-UX 11.x/IA)
+				  mipseb (IRIX 6.x)
+				  parisc (HP-UX 10.20, 11.x/PA)
+				  ppc (AIX 4.3.x, 5.x)
+				  sparc (Solaris 2.x)
+				  x86_64 (RHEL/AMD64)
+      --rpm-db=<dir>		RPM database path
+      --sftp-known-hosts-path=<path>
+				Path to ssh_known_hosts file
+      --sftp-private-key-path=<path>
+				Path to ssh private key file
+      --subpkgs=<type>		Subpackage components to install. Can be
+				specified multiple times. Possible types are:
+				  conf doc libruntime man packages runtime
+      --systype=<arch>		Architecture type. Possible types are:
+				  alpha-dec-osf5.1
+				  hppa1.1-hp-hpux[11.00, 11.11]
+				  hppa2.0-hp-hpux[11.23, 11.31]
+				  ia64-hp-hpux[11.23, 11.31]
+				  i386-pc-solaris2.10
+				  i686-redhat-linuxe[4, 5, 6]
+				  mips-sgi-irix6.5
+				  powerpc-ibm-aix[5.2.0.0, 5.3.0.0]
+				  powerpc-ibm-aix6.1.0.0
+				  powerpc-ibm-aix7.1.0.0
+				  sparc-sun-solaris[2.8, 2.9, 2.10]
+				  x86_64-redhat-linuxe[4, 5, 6]
+      --tmpbasedir=<path>	Temporary base directory to use when
+				creating temporary files. Needed when
+				package payload too big for default
+				temporary directory (/tmp or /var/tmp).
+      --update-type=<type>	Limit updates to <type>. Possible types are:
+				  errata packages security support updates
+				Default type is "packages". Used mainly
+				when installing from a remote depot.
+  -v, --verbose			Verbose output (additive)
+  -V, --version			Display program version and exit
+tjyang@tj1210:~/cpam/cpambook$ 

@@ -1,0 +1,55 @@
+tjyang@tj1210:~/cpam/cpambook$ /opt/TWWfsw/bin/sb --help
+sb: sb [options] program [program ...]
+
+  -B, --build			Build program
+      --builddir=<path>		Directory to unpack and build from
+      --check-sig               Check GPG signature
+  -c, --config=<path>		Path to alternate configuration file
+  -C, --configure		Configure program for building
+  -s, --depot=<depot>		Data directory
+  -G, --dist=<dist>		Name of distribution to build for
+  -d, --dist-ver=<ver>		Distribution version
+  -N, --dry-run			Dry run. Tell what would be done but do
+				not build any packages
+  -E, --egd-socket=<path>	Path to EGD socket
+  -F, --force			Build even though program already installed
+      --gpg-keyring-path=<path>	Path to GPG public keyring
+  -h, --help			Output usage message then exit
+      --ignoredeps              Ignore dependencies when used with
+				--uninstall, --update-db, and --purge
+  -i, --install			Install program
+  -b, --install-base=<path>	Installation base
+  -n, --install-path=<path>	Installation path
+      --local-depot=<depot>	Path to local depot to store files
+				retrieved from remote depots
+      --login=<login>		Login for remote depot
+  -m, --module=<module>		Build specofic module (--module-all to
+				build all modules)
+      --password=<pass>		Password for remote depot
+  -f, --prog-list=<path>	Take list of packages from file <path>
+      --proxy-host=<host:port>	Hostname and proxy of proxy server
+      --proxy-login=<login>	Login for proxy server
+      --proxy-password=<pass>	Password to proxy server
+  -p, --purge			Remove program source
+  -q, --query=<string>		Query information from program. <string>
+				can be one of `changelog', `install-prefix',
+				`install-name', `module-names', `notes',
+				`patches', `program-name', `program-version',
+				`sbdb-path', or `sources'. When combined
+				with `-i', `-q module-names' queries against
+				the sb database of installed programs and,
+				when combined with '-B', queries against the
+				sb database of built programs.
+      --query-indent=<num>	Indent query output by <num> characters
+      --sftp-known-hosts-path=<path>
+				Path to ssh_known_hosts file
+      --sftp-private-key-path=<path>
+				Path to ssh private key file
+  -t, --test			Test program
+  -U, --uninstall		Uninstall program (remove installed files)
+  -u, --unpack			Unpack sources and apply patches
+      --update-db		Update database entry
+      --validate		Validate installation of all modules
+  -v, --verbose			Verbose output (additive)
+  -V, --version			Display program version and exit
+tjyang@tj1210:~/cpam/cpambook$ 

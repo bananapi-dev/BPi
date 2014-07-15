@@ -1,0 +1,258 @@
+pkg-rm(1)                                                                                              pkg-rm(1)
+
+
+
+NAME
+       pkg-rm - Remomve selected packages
+
+
+SYNOPSIS
+       pkg-rm [--add-all-packages] [--add-deps] [--add-reverse-deps] [-e|--arg=<arg>] [-c|--config=<path>]
+              [-G|--dist=<dist>] [-N|--dry-run] [-h|--help] [--ignoredeps] [--npkg-db=<dir>] [--pkg-db=<path>]
+              [-f|--pkg-list=<path>] [-t|--pkg-type=<type>] [-R|--root=<path>] [--rpm-db=<dir>]
+              [--subpkgs=<type>] [--systype=<type>] [-v|--verbose] [-V|--version]
+              [<package>[-<ver>[-<rev>]] ...]
+
+
+DESCRIPTION
+       The  pkg-rm  utility  provides  a  front end to the HP-UX swremove, IRIX versions, Solaris pkgrm, AIX in‐
+       stallp, Tru64 UNIX setld, Npkg, and RPM package manager tools. It abstracts the package  removal  process
+       through  the use of an XML package database that contains information about a package. It is the opposite
+       of the pkg-inst tool.
+
+       Multiple packages can be removed at once. When a package is selected for removal,  dependencies  will  be
+       removed  if  --add-deps  is  specified  and  any  packages  that depend on the package will be removed if
+       (--add-reverse-deps). Dependent packages are removed after the requested package.
+
+       Packages  are  specified  by  package  name  and   an   optional   version,   revision   number   (<pack‐
+       age>[-<ver>[-<rev>]]). If the version number is not specified, all installed versions of the package will
+       be removed. If the revision number is  not  specified,  only  the  installed  version  matching  ``<pack‐
+       age>-<ver>''  will be removed. If no packages are given, all installed packages are removed. The pkg-info
+       command can be used to provide a list of packages.
+
+       Packages are specified by package name and an optional version number (<package>[-<ver>]). If the version
+       number  is  not  specified,  pkg-rm will remove all installed versions of the package. If no packages are
+       given, all installed packages are removed.
+
+
+OPTIONS
+       --add-all-packages
+            Remove all packages.
+
+
+       --add-deps
+            Remove the dependencies for a package. By default, pkg-rm will not remove the dependencies, but only
+            the package itself.
+
+
+       --add-reverse-deps
+            Unless  the  --ignoredeps  option  is given, pkg-rm will refuse to remove a package with dependents.
+            This option will automatically add all dependents to the package list and  remove  them  before  the
+            package they are dependent on (the package with the dependents).
+
+            -e, --arg <arg> Additional arguments to pass to the package manager. The default action of pkg-rm is
+            to pass minimal arguments to the package manager, depending on the package management system. Multi‐
+            ple  instances  of this option can be used to pass additional arguments, such as ``-a TWW'' (i.e. -e
+            -a -e TWW) to Solaris pkgrm.  Each argument is passed as a quoted argument to the package manager.
+
+
+       -c, --config <path>
+            Alternate    path    to    configuration    file.    The    default     path     is     ``/opt/TWWf‐
+            sw/pkgutils16/etc/pkgutils.conf''.   The   format   of  the  configuration  file  is  documented  in
+            pkgutils.conf(4).
+
+
+       -G, --dist <dist>
+            Distribution to get information for. Used main to get distribution-specific variables in config file
+            in ``dist-opts'' section.
+
+
+       -N, --dry-run
+            Indicate what actions would be performed but do not execute the actions. This is useful to determine
+            what commands would be executed to remove the package without having the removal occur.
+
+
+       -h, --help
+            Displays short description of program options and then exits the program.
+
+
+       --ignoredeps
+            When a package with dependents is installed, pkg-rm will refuse to remove the package  unless  --ig‐
+            noredeps is given. The rationale for this is because by removing the dependency, the packages depen‐
+            dent on what was just removed are no longer functional. This option overrides the default  behavior.
+            See also the --add-reverse-deps option.
+
+
+       --npkg-db <dir>
+            Path to Npkg database, if using the Npkg package management system.
+
+
+       --pkg-db <path>
+            Path  to database of installed packages. In addition to the list of packages maintained by the pack‐
+            age management system, pkgutils maintains a list of packages installed with pkg-inst. This speeds up
+            pkg-info,  and  pkg-rm.  A  global package database was available in pkgutils 1.3.x which contains a
+            list of all packages ever built and their dependencies. Unfortunately, this file must be  read  with
+            every  invocation  of  chk-pkg-updates,  pkg-info, or pkg-rm making startup times slow. In addition,
+            maintaining this file for every package ever built  was  unwieldy.  If  ``<path>''  is  ''disable'',
+            pkg-db.xml entries are not removed.
+
+
+       -f, --pkg-list <file>
+            Read <file> for a list of packages. This option can be specified multiple times.
+
+
+       -t, --pkg-type <type>
+            Specify  an alternate package management system. If using the native package management system, this
+            is unnecessary. If this option is not specified, pkg-rm automatically determines the package manage‐
+            ment system based on the platform it is running on. If you are using a non-native package management
+            system such as Npkg or RPM, this option must be specified. The available <type>s are  ``depot''  for
+            HP-UX  depot,  ``inst''  for  IRIX  inst, ``lpp'' for AIX, ``npkg'' for Npkg, ``pkgadd'' for Solaris
+            pkgadd, ``rpm' for RPM, and ``setld'' for Tru64 UNIX setld.
+
+
+       -R, --root <path>
+            Alternate root directory, as used when installing the package. This option is only applicable  under
+            IRIX, HP-UX, and Solaris, whose package management systems allow specifying an alternate root direc‐
+            tory.
+
+
+       --rpm-db <dir>
+            Path to RPM database, if using the RPM package management system.
+
+
+       --subpkgs <type>
+            All components of a package are removed except when a dependency is being removed in which case only
+            the  component required for the dependency is removed. If only a few of the available components are
+            to be removed, multiple instances of this option should be used. The available component <type>s are
+            ``conf'' for local configuration files, ``doc'' for online documentation, ``libruntime'' for the li‐
+            brary runtime, ``man'' for GNU info and man pages, ``packages'' for 3rd-party packages,  and  ``run‐
+            time'' for the runtime component.
+
+
+       --systype <arch>
+            Used to specify the host architecture type. Needed only if removing for an architecture type differ‐
+            ent from the host architecture type (e.g. RPM). It could also be used to remove Solaris 2.9 packages
+            on a Solaris 2.8 host.
+
+
+       -v, --verbose
+            Provide  more  verbose diagnostics during program execution.  pkg-rm uses the global pkg-db.xml file
+            to determine what possible versions exist for a package. The default action is not to display infor‐
+            mation  messages  as  pkg-rm  runs if the package does not exist but to limit such messages to those
+            that exist. With this option, the status messages will display even for packages that do not exists.
+
+
+       -V, --version
+            Display version number of pkg-inst and exit.
+
+
+EXAMPLES
+       Removing the libpng image library on Solaris with a dependency on zlib:
+           $ pkg-rm libpng
+           libpng
+             checking if v1.2.29-2 installed (TWWpng12) ... yes
+               installed instances ... TWWpng12u TWWpng12m
+             checking for packages dependent on me ... none
+             checking for dependencies ... yes
+               TWWlibz12u (v>=1.2.3, r>=1) ... installed (v1.2.3-4)
+             removing TWWpng12m ...
+               $ pkgrm -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -n TWWpng12m
+               ...
+               removing man fileset package database entry ... done
+             removing TWWpng12u ...
+               $ pkgrm -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -n TWWpng12u
+               ...
+               removing runtime fileset package database entry ... done
+
+           $ pkg-rm --add-deps libpng
+           libpng
+             checking if v1.2.29-2 installed (TWWpng12) ... yes
+               installed instances ... TWWpng12u TWWpng12m
+             checking for packages dependent on me ... none
+             checking for dependencies ... yes
+               TWWlibz12u (v>=1.2.3, r>=1) ... installed (v1.2.3-4)
+             adding packages ...
+               adding TWWlibz12u [zlib] (v>=1.2.3, r>=1) to package list
+             removing TWWpng12m ...
+               $ pkgrm -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -n TWWpng12m
+               ...
+               removing man fileset package database entry ... done
+             removing TWWpng12u ...
+               $ pkgrm -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -n TWWpng12u
+               ...
+               removing runtime fileset package database entry ... done
+
+           zlib
+             checking if v1.2.3 installed (TWWlibz12) ... yes
+               installed instances ... TWWlibz12u
+             checking for packages dependent on me ... none
+             checking for dependencies ... none
+             removing TWWlibz12u ...
+               $ pkgrm -a /opt/TWWfsw/pkgutils16/share/pkgadd/admin -n TWWlibz12u
+               ...
+               removing runtime fileset package database entry ... done
+
+       Removing the zlib package with --add-reverse-deps on IRIX with libpng, tiff,  and  jpeg  installed  (with
+       libpng and tiff dependent on zlib):
+           $ pkg-rm --add-reverse-deps zlib
+           zlib
+             checking if v1.2.3-4 installed (TWWlibz12) ... yes
+               installed instances ... TWWlibz12.sw.base
+             checking for packages dependent on me ... yes
+               TWWlibpng12 [libpng] ... installed (v1273450501)
+               TWWlibtiff38 [tiff] ... installed (v1279770103)
+             reordering packages ...
+               adding TWWlibpng12 [libpng] (v1.2.29) to package list
+               adding TWWlibtiff38 [tiff] (v3.8.2) to package list
+             checking for dependencies ... none
+             will remove after dependent packages removed
+
+           tiff
+             checking if v3.8.2 installed (TWWlibtiff38) ... yes
+               installed instances ... TWWlibtiff38.sw.base
+             checking for packages dependent on me ... none
+             checking for dependencies ... yes
+               TWWlibz12.sw.base (v>=1279590100) ... installed (v1279590104)
+               TWWjpeg.sw.base (v>=1270180100) ... installed (v1270180108)
+             removing TWWlibtiff38.sw.base ...
+               $ versions remove TWWlibtiff38.sw.base
+               ...
+               removing runtime fileset package database entry ... done
+
+           libpng
+             checking if v1.2.29 installed (TWWlibpng12) ... yes
+               installed instances ... TWWlibpng12.sw.base
+             checking for packages dependent on me ... none
+             checking for dependencies ... yes
+               TWWlibz12.sw.base (v>=1279590100) ... installed (v1279590104)
+             removing TWWlibpng12.sw.base ...
+               $ versions remove TWWlibpng12.sw.base
+               ...
+               removing runtime fileset package database entry ... done
+
+           zlib
+             checking if v1.2.3-4 installed (TWWlibz12) ... yes
+               installed instances ... TWWlibz12.sw.base
+             checking for packages dependent on me ... none
+             checking for dependencies ... none
+             removing TWWlibz12.sw.base ...
+               $ versions remove TWWlibz12.sw.base
+               ...
+               removing runtime fileset package database entry ... done
+
+
+SEE ALSO
+       pkg-db.xml(4), pkg-info(1), pkg-inst(1), pkgutils.conf(4)
+
+
+FILES
+       /var/opt/TWWfsw/pkgutils16
+                           Default path for pkg-db.xml package database files (cf.  --pkg-db)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                2010 February 25                                       pkg-rm(1)

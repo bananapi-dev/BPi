@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<programs>
+  <program name="hello" version="2.7" revision="1">
+    <build-name>${SB_PROG_NAME}-${SB_PROG_VER}</build-name>
+    <install-name>${SB_PROG_NAME}27</install-name>
+    <sources>
+      <source path="src/hello-2.7.tar.gz"/>
+<!--
+      <patch  path="src/hello-2.7.tww.patch"/>
+-->
+    </sources>
+    <dependencies>
+<!-- place holder
+      <depend program="ncurses" var="NCURSES">v==5.6</depend>
+-->
+    </dependencies>
+    <script-header>
+<![CDATA[
+_datadir="${SB_INSTALL_PREFIX}/share"
+_docdir="${SB_INSTALL_PREFIX}/doc"
+_sysconfdir="${SB_INSTALL_PREFIX}/etc"
+]]>
+    </script-header>
+    <configure>
+<![CDATA[
+case "${SB_SYSTYPE}" in
+i?86*-solaris*)
+  CC=/usr/bin/gcc CFLAGS="-O2 -mcpu=pentiumpro -march=pentiumpro"
+  CC_LD_RT="-Wl,-rpath," ;;
+x86_64-unknown-linux-gnu)
+;;
+esac
+./configure CC="${CC:-gcc}" \
+--mandir=${SB_INSTALL_PREFIX}/man \
+--prefix=${SB_INSTALL_PREFIX}
+]]>
+    </configure>
+
+    <build>
+<![CDATA[
+gmake
+]]>
+    </build>
+    <install>
+<![CDATA[
+gmake install 
+]]>
+    </install>
+  </program>
+</programs>

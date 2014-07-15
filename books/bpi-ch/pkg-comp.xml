@@ -1,0 +1,641 @@
+<pkgcomp>
+<title>Comparing Linux/UNIX Binary Package Formats</title>
+<intro>
+<p>
+This is a comparison of the deb, rpm, tgz, slp, and pkg package formats,
+as used in the Debian, Red Hat, Slackware, and Stampede linux
+distributions respectively (pkg is the SVr4 package format, used in 
+Solaris). I've had some experience with each of the package formats,
+both building packages, and later in my work on the
+<a href="http://kitenet.net/programs/alien">Alien</a> package conversion
+program.
+</p>
+<p>
+I've tried to keep this comparison unbiased, however for the record, I'm a
+fan of the deb format, and a Debian developer. If you discover any bias or
+inaccuracy in this comparison, or any important features of a package format
+I have left out, please <a href="mailto:joey@kitenet.net">mail me</a> so I can
+correct it. Several people have already done so. I'm also looking for data
+to fill in the places marked by `?'.
+</p>
+<p>
+This comparison deals only with the package formats, not with the various
+tools (dpkg, rpm, etc.), that are used to deal with and install the packages.
+It also does not deal with source packages, only binary packages.
+</p>
+</intro>
+
+<group name="Security, authentication, and verification">
+<description>
+This section deals with ensuring that you know who created the package, and
+that you can check the package installed on your system to see if the files
+in it have ben modified since you installed it.
+</description>
+
+<item name="signed packages">
+<description>
+Does the package format contain internal support for a GPG or PGP 
+signature that can be used to verify who created it?
+</description>
+<deb>yes<footnote>Not yet widely used though.</footnote></deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+<item name="checksums">
+<description>
+Are checksums available for all the files in the package?
+</description>
+<deb>yes<footnote>md5sums file available in control data, but not
+explicitly part of packaging format, some packages omit it</footnote></deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="permissions, owners, etc">
+<description>
+Is information on the files in the package, their proper permissions, sizes,
+owners, groups, major and minor number (for devices), etc, available?
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>yes</tgz>
+<slp>yes</slp>
+<pkg>yes</pkg>
+</item>
+
+</group>
+
+<group name="Usability by standard linux tools">
+<description>
+Recognising that it's important sometimes to be able to peer inside packages
+without using their package managers, this section compares how the various
+packages can be processed with tools available on any linux system
+<footnote>Why standard linux tools, not unix tools in general? It's
+been pointed out that eg, gzip is not at all standard on all the unix systems
+out there.
+</footnote>.
+</description>
+
+<item name="recognizable by file">
+<description>
+Is the package format able to be recognized by <command>file</command>?
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>no</slp>
+<tgz>no</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="data unpackable by standard tools">
+<description>
+Can an experienced user, when presented with a package in this
+format, extract its payload using only tools that will be on any linux
+system? They can remember a few facts to help them deal with the format,
+but remembering file offsets and stuff like that is too hard.
+</description>
+<deb>yes
+<footnote>
+The admin would only have to remember that a deb is an ar archive, containing
+some tarballs.
+</footnote>
+</deb>
+<rpm>no
+<footnote>
+rpm2cpio can do it, but it's not a standard tool, except on rpm-based
+systems. Some fairly short programs can do it, but none of them are
+something you'd want to memorize.
+</footnote>
+</rpm>
+<tgz>yes</tgz>
+<slp>yes
+<footnote>
+Assuming that bunzip2 is a standard linux tool, or that the package uses
+gzip compression instead. You need only remember that the package starts
+with its payload; the metadata is tacked on the end and will be ignored.
+</footnote>
+</slp>
+<pkg>no
+<footnote>
+Most repositories use a specific "datastream" format, while some
+others simply use tarballs. In the case of tarballs, yes. For the
+datastream format, a pkgtrans program is available on systems using the pkg
+format, but not quite standard enough for the purposes of this question.
+</footnote>
+</pkg>
+</item>
+
+<item name="metadata accessible by standard tools">
+<description>
+If the package has some sort of metadata (ie, package name, description,
+version) contained in it, can this data be accessed by standard tools,
+without too much difficulty?
+</description>
+<deb>yes</deb>
+<rpm>no</rpm>
+<tgz>N/A</tgz>
+<slp>no</slp>
+<pkg>no
+<footnote>
+Most repositories use a specific "datastream" format, while some
+others simply use tarballs. In the case of tarballs, yes.
+</footnote>
+</pkg>
+</item>
+
+<item name="creatable by standard tools">
+<description>
+Can a package be created using standard tools, without too much difficulty? 
+</description>
+<deb>yes
+<footnote>
+Although apt currently has a bug (#222701) with debs created with ar.
+</footnote>
+</deb>
+<rpm>no</rpm>
+<tgz>yes</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+</group>
+
+<group name="Metadata">
+<description>
+Metadata is my term for the information about a package contained in the
+package. This includes things like the package name, description, and
+version number.
+</description>
+
+<item name="name">
+<description>
+Does the package have a name in the metadata?
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>yes</slp>
+<tgz>no</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="version">
+<description>
+Does the package have a version number in the metadata?
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>yes</slp>
+<tgz>no</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="description">
+<description>
+Is there a place in the metadata for a description of the package?
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>yes</slp>
+<tgz>yes
+<footnote>
+There's an install/description file for this information in at
+least some Slackware tgz files.		
+</footnote>	
+</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="dependencies">
+<description>
+A dependency says a package needs another package to be installed for the
+first package to work properly.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>yes</slp>
+<tgz>no</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="recommendations">
+<description>
+A recommendation says a package will almost always need to have another
+package installed.
+</description>
+<deb>yes</deb>
+<rpm>no</rpm>
+<slp>no</slp>
+<tgz>no</tgz>
+<pkg>no</pkg>
+</item>
+
+<item name="suggestions">
+<description>
+A suggestion says a package may sometimes work better if another package is
+installed. The user can just be informed of this as a FYI. 
+</description>
+<deb>yes</deb>
+<rpm>no</rpm>
+<slp>no</slp>
+<tgz>no</tgz>
+<pkg>no</pkg>
+</item>
+
+<item name="conflicts">
+<description>
+A conflict is a package that cannot be installed when this package is
+installed. One common reason is if the two packages both contain the same
+files.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>yes</slp>
+<tgz>no</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="virtual packages and provides">
+<description>
+This means that there are so called "virtual packages", such as a web
+browser, or a mail delivery system, and packages can say they provide those
+virtual packages, while other packages can depend on the virtual packages. 
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>??</slp>
+<pkg>no</pkg>
+</item>
+
+<item name="versioned dependencies and conflicts">
+<description>
+A package can depend on or conflict with (or recommend, etc.), a specific
+version of a package, or all versions &gt; or &lt; a given version.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>??</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="boolean package relationshipss">
+<description>
+This means that a package can depend, conflict, etc on a package AND 
+(another package OR a third package). Any boolean expression must be
+representable, no matter how complex.
+<footnote>
+Though you might have to do some factoring.
+</footnote>
+</description>
+<deb>yes</deb>
+<rpm>no
+<footnote>
+An rpm may depend on a list of packages, but boolean OR is not supported.
+You can often get the same effect using virtual packages and
+provides. This isn't quite the same, since it does require more coordination
+between packagers, and the following relationship cannot be expressed with
+provides:
+foo (&lt;&lt; 1.1) | foo (&gt;&gt; 2.0)
+</footnote>
+</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+<item name="file dependencies">
+<description>
+This means a package can require that some other package - any other package
+- be installed that contains a given file (like /bin/sh) <footnote>Some
+people consider file dependencies a gross misfeature.</footnote>.
+</description>
+<deb>no</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+<item name="copyright info">
+<description>
+The package's metadata contains basic copyright information. This is useful
+for automatic copyright sorting, etc.
+</description>
+<deb>no
+<footnote>
+Copyright info is included in debian packages, but not in an easily
+extractable format.
+</footnote>
+</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>yes</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="grouping">
+<description>
+The package can be assigned to a group (ie, web browsers, libraries), which
+might be used to group the packages when viewing a list of available
+packages, etc. This makes it easier to deal with large groups of packages.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="priority">
+<description>
+The package can be assigned a priority, which says how important this
+package is to the system. For example, packages with high priority should be
+looked at carefully when you are setting up a system, but you can skip
+installing all the packages with low priority and still know you'll still get
+a functional unix system. 
+</description>
+<deb>yes</deb>
+<rpm>no</rpm>
+<tgz>no</tgz>
+<slp>yes</slp>
+<pkg>no</pkg>
+</item>
+
+</group>
+
+<group name="Special files">
+<description>
+The ability to categorize files depending on what they are used for, so they
+can be dealt with in special ways. 
+</description>
+
+<item name="config files">
+<description>
+Are config files supported? These are files that the user will typically
+want to edit, so when a new version of a package is installed, the package
+manager should be able to know to leave them alone, or do something smart like
+prompt the user for what to do if they have modified the files, or at least
+make backups of the user's changes before overwriting them. (Maybe I need more
+granularity here?)
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>yes</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="documentation files">
+<description>
+Can documentation files be specially marked? This could be useful to help a
+user find documentation. 
+</description>
+<deb>no</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>yes
+<footnote>
+Fields exist, but there is no standard way to use them.		
+</footnote>
+</pkg>
+</item>
+
+<item name="ghost files">
+<description>
+Ghost files are files that are not actually present in the package, but are
+listed as being a part of it once the package is installed. This is useful
+for log files.
+</description>
+<deb>no</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+</group>
+
+<group name="Package programs">
+<description>
+These are programs that are contained in the package, to be run by the
+package manager when the package is installed, or uninstalled, or at other
+times.
+</description>
+
+<item name="binary programs allowed">
+<description>
+Must these programs be scripts, or can compiled binaries be used as
+well?
+</description>
+<deb>yes</deb>
+<rpm>no</rpm>
+<tgz>??</tgz>
+<slp>yes</slp>
+<pkg>no</pkg>
+</item>
+
+<item name="pre-install program">
+<description>
+A program to be run by the package manager before the package is installed
+on the system.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no
+<footnote>
+Supported by a version of this package format used at one time by SuSE Linux.
+</footnote>
+</tgz>
+<slp>no</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="post-install program">
+<description>
+A program to be run by the package manager after the package is installed on
+the system.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<slp>yes</slp>
+<tgz>yes</tgz>
+<pkg>yes</pkg>
+</item>
+
+<item name="pre-remove program">
+<description>
+A program to be run by the package manager before the package is removed.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no
+<footnote>
+Supported by a version of this package format used at one time by SuSE Linux.
+</footnote>
+</tgz>
+<slp>no</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="post-remove program">
+<description>
+A program to be run by the package manager after the package is removed.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>yes
+<footnote>
+Supported by a version of this package format used at one time by SuSE Linux.
+</footnote>
+</tgz>
+<slp>no</slp>
+<pkg>yes</pkg>
+</item>
+
+<item name="verify program">
+<description>
+A program to be run by the package manager when the state of the installed
+package is being verified.
+</description>
+<deb>no</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+<item name="triggers">
+<description>
+This is a whole set of programs, that are run not when this
+package changes state, but when another package changes state.
+Design and capabilities vary widely.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no</pkg>
+</item>
+
+</group>
+
+<group name="Scalability">
+<description>
+How well the package format is able to grow to meet future needs. This is of
+great importance. Many of the comparisons above have little value in the
+face of this section, because new package programs, new metadata fields, etc
+can all be added to a scalable package format with little difficulty. 
+</description>
+
+<item name="no hard-coded limits">
+<description>
+Are there no limits hard-coded into the package format, that might prevent
+it from expanding to meet future needs? For example, are package names or
+versions of unlimited size? 
+</description>
+<deb>yes</deb>
+<rpm>yes
+<footnote>
+Technically, the rpm "lead" contains hard-coded limits on the package name,
+but the lead is no longer really used by anything except file.
+</footnote>
+</rpm>
+<tgz>yes</tgz>
+<slp>no</slp>
+<pkg>no
+<footnote>
+Most repositories use a specific "datastream" format, while some
+others simply use tarballs. In the case of tarballs, yes.
+</footnote>
+</pkg>
+</item>
+
+<item name="new metadata">
+<description>
+Can new information (text, binary data, whatever) be added to the metadata
+easily, without changing the package format?
+</description>
+<deb>yes</deb>
+<rpm>yes
+<footnote>
+To be useful, you need to get a tag number assigned to your new piece of
+metadata, which implies modifying the rpm program.
+</footnote>
+</rpm>
+<tgz>N/A</tgz>
+<slp>no</slp>
+<pkg>no
+<footnote>
+Most repositories use a specific "datastream" format, while some
+others simply use tarballs. In the case of tarballs, yes.
+</footnote>
+</pkg>
+</item>
+
+<item name="new section">
+<description>
+Can the whole new sections be added to the packages, without changing the
+package format? For example, could the package format be expanded to have a
+pgp signature attached at the end, or to have a second set of data files,
+compiled for a different architecture or with different optimizations,
+attached the end? This is the ultimate test of how flexible the format is,
+I'm basically asking, was it designed to cope with unforeseen new requirements? 
+</description>
+<deb>yes</deb>
+<rpm>no</rpm>
+<tgz>no</tgz>
+<slp>no</slp>
+<pkg>no
+<footnote>
+Most repositories use a specific "datastream" format, while some
+others simply use tarballs. In the case of tarballs, yes.
+</footnote>
+</pkg>
+</item>
+
+<item name="format version data">
+<description>
+Is there some way to look at a package and tell which version of the package
+format it is using? In extreme cases, this means, the whole package format
+can be thrown out and redesigned but old tools will still be able to read
+enough of the packages to know they can't deal with them.
+</description>
+<deb>yes</deb>
+<rpm>yes</rpm>
+<tgz>no</tgz>
+<slp>yes</slp>
+<pkg>no
+<footnote>
+Most repositories use a specific "datastream" format, while some
+others simply use tarballs. In the case of tarballs, yes.
+</footnote>
+</pkg>
+</item>
+
+</group>
+
+<todo>relocatable packages</todo>
+<todo>support for arch name in metadata, arch indep packages</todo>
+<todo>multiple version of the same package can be installed simultaneously
+(is this really a package format issue?)</todo>
+<todo>info available to package programs -- The programs may find various
+information useful to make decisions while they are running. Of course, all
+of them can look at what's currently on the filesystem, run other programs and
+look at the output, etc. This lists other information that may be useful.
+(old package version, etc)
+</todo>
+
+<copyright>
+Copyright 1998-2003 by <a href="mailto:joey@kitenet.net">Joey
+Hess</a> under the terms of the GNU GPL, either version 2 or at
+your option, any later version.
+</copyright>
+
+</pkgcomp>

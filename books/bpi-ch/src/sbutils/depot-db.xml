@@ -1,0 +1,128 @@
+depot-db.xml(4)                                                depot-db.xml(4)
+
+
+
+NAME
+       depot-db.xml
+
+
+FILE FORMAT
+       The ``depot-db.xml'' file contains the names of directories that should
+       be  scanned  while  sb  queries  the  depot  for  programs.   The  path
+       ``<dist>''  is  prepended  to  the depot path for all remote depots and
+       local (file://) depots with a  distribution  version.   Beginning  from
+       this  path, sb reads the ``depot-db.xml'' file and adds the path compo‐
+       nents it specifies to the parent path as another depot to  looking  for
+       programs  in.  By  providing  successive  ``depot-db.xml'' files in the
+       path, sb is able to descend a directory hierarchy and  search  multiple
+       directories for programs.
+
+       The DTD for the XML file is as follows:
+           <!ELEMENT depots (depot+)>
+           <!ELEMENT depot EMPTY>
+           <!ATTLIST depot
+             arch          CDATA           #IMPLIED
+             auto-include  CDATA            1"
+             category      CDATA           #IMPLIED
+             dist-ver      CDATA           #IMPLIED
+             name          CDATA           #REQUIRED
+             program       CDATA           #IMPLIED
+             systype       CDATA           #IMPLIED
+             revision      CDATA           #IMPLIED
+             version       CDATA           #IMPLIED>
+
+
+DEPOT ATTRIBUTES
+       A depot element can have the following attributes:
+
+       arch, systype
+           Architecture  type for packages in the directory. Common values are
+           the  GNU  system  triple  such   as   ``sparc-sun-solaris2.8''   or
+           ``alpha-dec-osf5.1''.  There  is no predefined set of update types.
+           As long as the application understands the type, any  name  can  be
+           used.  arch is deprecated. Use systype instead.
+
+
+       auto-include
+           Whether  or not the directory should be traversed unless explicitly
+           requested.
+
+
+       category
+           Update type. While this can be any value specifying an update type,
+           it  is  usually  ``src''  to  specify a directory containing source
+           code. As long as the application understands the type, any name can
+           be used.
+
+
+       dist-ver
+           Distribution  version.  There is no predefined set of update types.
+           As long as the application understands the type, any  name  can  be
+           used.  Multiple distribution versions can reference the same direc‐
+           tory (as used in the example below).
+
+
+       name
+           The directory name to traverse.
+
+
+       program
+           Program name. Short-circuit to support --oldstyle-dependency option
+           in gen-sb-db.
+
+
+       version
+           Program  version.  Short-circuit  to  support --oldstyle-dependency
+           option in gen-sb-db.
+
+
+       revision
+           Program revision. Short-circuit  to  support  --oldstyle-dependency
+           option in gen-sb-db.
+
+
+EXAMPLES
+       An example of ftp://updates.thewrittenword.com/cd/dists/depot-db.xml:
+           <?xml version="1.0"?>
+           <depots>
+             <depot dist-ver="9.0" name="9.0"/>
+             <depot dist-ver="8.3" name="8.3"/>
+             <depot dist-ver="latest" name="9.0"/>
+           </depots>
+
+       An   example   of  ftp://updates.thewrittenword.com/cd/dists/9.0/depot-
+       db.xml:
+           <?xml version="1.0"?>
+           <depots>
+             <depot category="packages" name="packages"/>
+             <depot category="src" name="src"/>
+             <depot category="support" auto-include="0" name="support"/>
+             <depot category="test" auto-include="0" name="test"/>
+             <depot category="updates" name="updates"/>
+           </depots>
+
+       An example of  ftp://updates.thewrittenword.com/cd/dists/9.0/src/depot-
+       db.xml:
+           <?xml version="1.0"?>
+           <depots>
+             <depot name="gcc-4.2.4" package="gcc-4.2.4"/>
+             <depot name="gnupg-2.0.13" package="gnupg-2.0.13"/>
+             <depot name="libpng-1.2.29" package="libpng-1.2.29"/>
+           </depots>
+
+
+FILES
+       /opt/TWWfsw/sbutils13/share/depot-db.dtd
+                           DTD
+
+
+SEE ALSO
+       sb-db.xml(4), sb(1)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                               2010 February 19                depot-db.xml(4)

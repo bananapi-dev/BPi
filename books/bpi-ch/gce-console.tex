@@ -1,0 +1,535 @@
+\epi{``In Go, the code does exactly what it says on the page.''}{\textit{Go
+Nuts mailing list}\\\textsc{ANDREW GERRAND}}
+\noindent{}There are a few things that make Go different from other
+languages.
+
+\section{Getting Started with gcutil}
+
+\subsection{Install gcutil}
+\begin{enumerate}
+\item check your machine internet connection
+  \begin{lstlisting}[language=Bash]
+tjyang@tj1210:~/gcep$ ping -c 2 google-compute-engine-tools.googlecode.com
+PING googlecode.l.googleusercontent.com (74.125.142.82) 56(84) bytes of data.
+64 bytes from ie-in-f82.1e100.net (74.125.142.82): icmp_req=1 ttl=128 time=25.9 ms
+64 bytes from ie-in-f82.1e100.net (74.125.142.82): icmp_req=2 ttl=128 time=34.3 ms
+
+--- googlecode.l.googleusercontent.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1002ms
+rtt min/avg/max/mdev = 25.927/30.128/34.330/4.205 ms
+tjyang@tj1210:~/gcep$ 
+  \end{lstlisting}
+
+\item if your machine is behind a http proxy firewall.
+  \begin{lstlisting}[language=Bash]
+tjyang@tj1210:~/gcep$ grep http /etc/wgetrc 
+# You can set the default proxies for Wget to use for http, https, and ftp.
+#https\_proxy = http://proxy.yoyodyne.com:18023/
+#http\_proxy = http://proxy.yoyodyne.com:18023/
+#ftp\_proxy = http://proxy.yoyodyne.com:18023/
+tjyang@tj1210:~/gcep$ 
+  \end{lstlisting}
+\item Get gcutil-1.4.1.tar.gz
+  \begin{lstlisting}[language=Bash]
+   wget https://google-compute-engine-tools.googlecode.com/files/gcutil-1.4.1.tar.gz
+  \end{lstlisting}
+\item untar the python script and move it to /usr/local/bin
+  \begin{lstlisting}[language=Bash]
+tjyang@tj1210:~$ tar xzf gcutil-1.4.1.tar.gz 
+tjyang@tj1210:~$ sudo mv gcutil-1.4.1 /usr/local/bin
+[sudo] password for tjyang: 
+tjyang@tj1210:~$ 
+  \end{lstlisting}
+\item make sure .bashrc in ~/.bash\_profile will be loaded after login.
+  \begin{lstlisting}[language=Bash]
+tjyang@tj1210:~$ cat .bash_profile 
+if [ -f ~/.bashrc]; then source ~/.bashrc; fi
+tjyang@tj1210:~$ 
+  \end{lstlisting}
+\item in .bashrc file, make sure gcutil and gsutil path are appended in PATH variable.
+  \begin{lstlisting}[language=Bash]
+TJYANG-MBA:~ tjyang$ 
+echo ``export PATH=${PATH}:/usr/local/bin/gcutil-1.4.1:/usr/local/bin/gsutil'' >> ~/.bashrc
+TJYANG-MBA:~ tjyang$ tail -1 ~/.bashrc
+export PATH=${PATH}:/usr/local/bin/gcutil-1.4.1:/usr/local/bin/gsutil
+TJYANG-MBA:~ tjyang$ 
+  \end{lstlisting}
+
+\item gcutil -version
+  \begin{lstlisting}[language=Bash]
+tjyang@tj1210:~/gcep$ which gcutil
+/usr/local/bin/gcutil-1.4.1/gcutil
+tjyang@tj1210:~/gcep$ gcutil version
+1.4.1
+tjyang@tj1210:~/gcep$ 
+  \end{lstlisting}
+\end{enumerate}
+
+\subsection{GCE account authentication}
+\begin{enumerate}
+\item abc
+  \begin{lstlisting}[language=Bash]
+tjyang@tj1210:~/gcep$ gcutil auth --project=motorola.com:motogce 
+tjyang@tj1210:~$ gcutil auth --project=motorola.com:motogce 
+Go to the following link in your browser:
+
+    https://accounts.google.com/o/oauth2/auth?scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcompute+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcompute.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdevstorage.full_control+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdevstorage.read_only+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdevstorage.read_write+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdevstorage.write_only+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob&response_type=code&client_id=1025389682001.apps.googleusercontent.com&access_type=offline
+
+Enter verification code: 4/039LJzdXr-ADrGnRgHzj7jwwt5wM.gnPgUIhM714euJJVnL49Cc_m9yJgdgI
+Authentication successful.
+INFO: Authorization succeeded for user tjyang@motorola.com
+tjyang@tj1210:~$ ls -la .gcu*
+-rw------- 1 tjyang tjyang 1547 Nov 23 19:26 .gcutil_auth
+-rw-rw-r-- 1 tjyang tjyang   94 Nov 23 18:35 .gcutil.version
+tjyang@tj1210:~$ 
+tjyang@tj1210:~$ cat .gcutil.version 
+{"current_version": "1.4.1", "last_checked_version": "1.4.1", "last_check": 1353717309.056243}tjyang@tj1210:~$ 
+tjyang@tj1210:~$ cat .gcutil_auth 
+{
+  "data": [
+    {
+      "credential": {
+        "_class": "OAuth2Credentials", 
+        "_module": "oauth2client.client", 
+        "access_token": "ya29.AHES6ZSdWfNOFZBKOjnZ4kjpG7F10uKWtof2TmvyOx9KmNQ", 
+        "client_id": "1025389682001.apps.googleusercontent.com", 
+        "client_secret": "xslsVXhA7C8aOfSfb6edB6p6", 
+        "id_token": {
+          "aud": "1025389682001.apps.googleusercontent.com", 
+          "cid": "1025389682001.apps.googleusercontent.com", 
+          "email": "tjyang@motorola.com", 
+          "exp": 1353724642, 
+          "hd": "motorola.com", 
+          "iat": 1353720742, 
+          "iss": "accounts.google.com", 
+          "token_hash": "AqHvhwLHl76fcQyxSxUPKA", 
+          "verified_email": "true"
+        }, 
+        "invalid": false, 
+        "refresh_token": "1/KHb5N7KXOHZLlE0QNm9tuR2KGPr1eU0adVF_82aa1h4", 
+        "token_expiry": "2012-11-24T02:37:22Z", 
+        "token_uri": "https://accounts.google.com/o/oauth2/token", 
+        "user_agent": "google-compute-cmdline/1.0"
+      }, 
+      "key": {
+        "clientId": "1025389682001.apps.googleusercontent.com", 
+        "scope": "https://www.googleapis.com/auth/compute https://www.googleapis.com/auth/compute.readonly https://www.googleapis.com/auth/devstorage.full_control https://www.googleapis.com/auth/devstorage.read_only https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only https://www.googleapis.com/auth/userinfo.email", 
+        "userAgent": "google-compute-cmdline/1.0"
+      }
+    }
+  ], 
+  "file_version": 1
+}tjyang@tj1210:~$ 
+
+  \end{lstlisting}
+\end{enumerate}
+
+\subsection{Simple check}
+\begin{enumerate}
+\item abe
+  \begin{lstlisting}[language=Bash]
+
+tjyang@tj1210:~$ gcutil --project=motorola.com:motogce auth --just_check_auth --cache_flag_values=True
+INFO: Authorization succeeded for user tjyang@motorola.com
+tjyang@tj1210:~$
+tjyang@tj1210:~$ cat .gcutil.flags 
+--project=motorola.com:motogce
+--just_check_auth
+tjyang@tj1210:~$ 
+  \end{lstlisting}
+\end{enumerate}
+
+\section{gcutil list of commands}
+ \lstset{basicstyle=\tiny\color{black}}
+  \begin{lstlisting}[language=Bash]
+Command line tool for interacting with Google Compute Engine.
+
+Please refer to http://developers.google.com/compute/docs/gcutil/tips for more information about gcutil
+usage.
+
+
+USAGE: gcutil [--global_flags] <command> [--command_flags] [args]
+
+
+Any of the following commands:
+  addaccessconfig, adddisk, addfirewall, addimage, addinstance, addnetwork, auth, deleteaccessconfig,
+  deletedisk, deletefirewall, deleteimage, deleteinstance, deletenetwork, deleteoperation, getdisk,
+  getfirewall, getimage, getinstance, getkernel, getmachinetype, getnetwork, getoperation, getproject,
+  getserialportoutput, getzone, help, listdisks, listfirewalls, listimages, listinstances, listkernels,
+  listmachinetypes, listnetworks, listoperations, listzones, pull, push, setcommoninstancemetadata,
+  ssh, version
+
+
+addaccessconfig            Adds an access config to an instance's network interface.
+
+                           Usage: gcutil [--global_flags] addaccessconfig [--command_flags]
+                           <instance-name>
+
+adddisk                    Create new machine disks.
+
+                           More than one disk name can be specified. Multiple disks will be created in
+                           parallel.
+
+                           Usage: gcutil [--global_flags] adddisk [--command_flags] <disk-name-1> ...
+                           <disk-name-n>
+
+addfirewall                Create a new firewall rule to allow incoming traffic for instances on a
+                           given network.
+
+                           Usage: gcutil [--global_flags] addfirewall [--command_flags] <firewall-name>
+
+addimage                   Create a new machine image.
+
+                           The root_source_tarball parameter must point to a tar file of the contents
+                           of the desired root directory stored in Google Storage.
+
+                           Usage: gcutil [--global_flags] addimage [--command_flags] <image-name>
+                           <root-source-tarball>
+
+addinstance                Create new VM instances.
+
+                           More than one instance name can be specified. Multiple instances will be
+                           created in parallel.
+
+                           Usage: gcutil [--global_flags] addinstance [--command_flags]
+                           <instance-name-1> ... <instance-name-n>
+
+addnetwork                 Create a new network instance.
+
+                           Usage: gcutil [--global_flags] addnetwork [--command_flags] <network-name>
+
+auth                       Class for forcing client authorization.
+
+                           Usage: gcutil [--global_flags] auth [--command_flags]
+
+deleteaccessconfig         Deletes an access config from an instance's network interface.
+
+                           Usage: gcutil [--global_flags] deleteaccessconfig [--command_flags]
+                           <instance-name>
+
+deletedisk                 Delete one or more machine disks.
+
+                           If multiple disk names are specified, the disks will be deleted in parallel.
+
+                           Usage: gcutil [--global_flags] deletedisk [--command_flags] <disk-name-1>
+                           ... <disk-name-n>
+
+deletefirewall             Delete one or more firewall rules.
+
+                           If multiple firewall names are specified, the firewalls will be deleted in
+                           parallel.
+
+                           Usage: gcutil [--global_flags] deletefirewall [--command_flags]
+                           <firewall-name-1> ... <firewall-name-n>
+
+deleteimage                Delete one or more machine images.
+
+                           If multiple image names are specified, the images will be deleted in
+                           parallel.
+
+                           Usage: gcutil [--global_flags] deleteimage [--command_flags] <image-name-1>
+                           ... <image-name-n>
+
+deleteinstance             Delete one or more VM instances.
+
+                           If multiple instance names are specified, the instances will be deleted in
+                           parallel.
+
+                           Usage: gcutil [--global_flags] deleteinstance [--command_flags]
+                           <instance-name-1> ... <instance-name-n>
+
+deletenetwork              Delete one or more machine networks.
+
+                           If multiple network names are specified, the networks will be deleted in
+                           parallel.
+
+                           Usage: gcutil [--global_flags] deletenetwork [--command_flags]
+                           <network-name-1> ... <network-name-n>
+
+deleteoperation            Delete one or more operations.
+
+                           Usage: gcutil [--global_flags] deleteoperation [--command_flags]
+                           <operation-name-1> ... <operation-name-n>
+
+getdisk                    Get a machine disk.
+
+                           Usage: gcutil [--global_flags] getdisk [--command_flags] <disk-name>
+
+getfirewall                Get a firewall.
+
+                           Usage: gcutil [--global_flags] getfirewall [--command_flags] <firewall-name>
+
+getimage                   Get a machine image.
+
+                           Usage: gcutil [--global_flags] getimage [--command_flags] <image-name>
+
+getinstance                Get a machine instance.
+
+                           Usage: gcutil [--global_flags] getinstance [--command_flags] <instance-name>
+
+getkernel                  Get a kernel.
+
+                           Usage: gcutil [--global_flags] getkernel [--command_flags]
+
+getmachinetype             Get a machine type.
+
+                           Usage: gcutil [--global_flags] getmachinetype [--command_flags]
+
+getnetwork                 Get a network instance.
+
+                           Usage: gcutil [--global_flags] getnetwork [--command_flags] <network-name>
+
+getoperation               Retrieve an operation resource.
+
+                           Usage: gcutil [--global_flags] getoperation [--command_flags]
+                           <operation-name>
+
+getproject                 Get the resource for a Google Compute Engine project.
+
+                           Usage: gcutil [--global_flags] getproject [--command_flags] <project-name>
+
+getserialportoutput        Get the output of an instance's serial port.
+
+                           Usage: gcutil [--global_flags] getserialportoutput [--command_flags]
+                           <instance-name>
+
+getzone                    Get a zone.
+
+                           Usage: gcutil [--global_flags] getzone [--command_flags] <zone-name>
+
+help                       Help for all or selected command:
+                               gcutil help [<command>]
+
+                           To retrieve help with global flags:
+                               gcutil --help
+
+                           To retrieve help with flags only from the main module:
+                               gcutil --helpshort [<command>]
+
+listdisks                  List the machine disks for a project.
+
+                           Usage: gcutil [--global_flags] listdisks [--command_flags]
+
+listfirewalls              List the firewall rules for a project.
+
+                           Usage: gcutil [--global_flags] listfirewalls [--command_flags]
+
+listimages                 List the machine images for a project.
+
+                           Usage: gcutil [--global_flags] listimages [--command_flags]
+
+listinstances              List the machine instances for a project.
+
+                           Usage: gcutil [--global_flags] listinstances [--command_flags]
+
+listkernels                List the machine kernels for a project.
+
+                           Usage: gcutil [--global_flags] listkernels [--command_flags]
+
+listmachinetypes           List the machine types.
+
+                           Usage: gcutil [--global_flags] listmachinetypes [--command_flags]
+
+listnetworks               List the machine networks for a project.
+
+                           Usage: gcutil [--global_flags] listnetworks [--command_flags]
+
+listoperations             List the operations for a project.
+
+                           Usage: gcutil [--global_flags] listoperations [--command_flags]
+
+listzones                  List available zones.
+
+                           Usage: gcutil [--global_flags] listzones [--command_flags]
+
+pull                       Pull one or more files from an instance.
+
+                           Usage: gcutil [--global_flags] pull [--command_flags] <instance-name>
+                           <file-1> ... <file-n> <destination>
+
+push                       Push one or more files to an instance.
+
+                           Usage: gcutil [--global_flags] push [--command_flags] <instance-name>
+                           <file-1> ... <file-n> <destination>
+
+setcommoninstancemetadata  Set the commonInstanceMetadata field for a Google Compute Engine project.
+
+                           This is a blanket overwrite of all of the project wide metadata.
+
+                           Usage: gcutil [--global_flags] setcommoninstancemetadata [--command_flags]
+
+ssh                        Ssh to an instance.
+
+                           Usage: gcutil [--global_flags] ssh [--command_flags] <instance-name>
+                           <ssh-args>
+
+version                    Get the current version of this command.
+
+                           Usage: gcutil [--global_flags] version [--command_flags]
+
+
+Run 'gcutil --help' to get help for global flags.
+Run 'gcutil help <command>' to get help for <command>.
+  \end{lstlisting}
+
+\section{addaccessconfig}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{adddisk}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{addfirewall}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{addimage}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{addinstance}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{addnetwork}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{auth}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deleteaccessconfig}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deletedisk}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deletefirewall}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deleteimage}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deleteinstance}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deletenetwork}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{deleteoperation}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getdisk}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getfirewall}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getimage}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getinstance}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getkernel}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getmachinetype}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getnetwork}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getoperation}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getproject}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getserialportoutput}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{getzone}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{help}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listdisks}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listfirewalls}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listimages}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listinstances}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listkernels}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listmachinetypes}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listnetworks}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listoperations}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{listzones}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{pull}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{push}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{setcommoninstancemetadata}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{ssh}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+\section{version}
+\begin{lstlisting}[language=Bash]
+\end{lstlisting}
+
+

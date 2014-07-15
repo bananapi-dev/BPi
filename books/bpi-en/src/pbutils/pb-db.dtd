@@ -1,0 +1,129 @@
+<!ELEMENT packages (package+)>
+<!ELEMENT package ((category?, title?, vendor*, description?,
+install-name?, variable*, wrapper*, config*, subpkg*)?,
+package-manager+, changelog?)>
+<!ATTLIST package
+  name				CDATA		#REQUIRED
+  revision			CDATA		"0"
+  version			CDATA		#REQUIRED>
+<!ELEMENT category (#PCDATA)>
+<!ELEMENT title (#PCDATA)>
+<!ELEMENT vendor (#PCDATA)>
+<!ATTLIST vendor
+  subpkg			CDATA		#IMPLIED>
+<!ELEMENT description (#PCDATA)>
+<!ATTLIST description
+  attribution			CDATA		#IMPLIED>
+<!ELEMENT changelog (change+)>
+<!ELEMENT change (item+)>
+<!ATTLIST change
+  author			CDATA		#REQUIRED
+  date				CDATA		#REQUIRED
+  email				CDATA		#REQUIRED
+  revision			CDATA		#REQUIRED>
+<!ELEMENT item (para+)>
+<!ELEMENT para (#PCDATA | command | ulink)*>
+<!ELEMENT command (#PCDATA)>
+<!ELEMENT ulink (#PCDATA)>
+<!ATTLIST ulink
+  url				CDATA		#REQUIRED>
+<!ELEMENT package-manager (category?, title?, vendor*, description?,
+install-name?, pkgname-base, config*, version, revision, compat*,
+variable*, wrapper*, (init | config)*, files*, subpkg*, replace*,
+changelog?)>
+<!ATTLIST package-manager
+  name				CDATA		#REQUIRED
+  systype			CDATA		#IMPLIED>
+<!ELEMENT install-name (#PCDATA)>
+<!ATTLIST install-name
+  version               	CDATA           #IMPLIED>
+<!ELEMENT pkgname-base (#PCDATA)>
+<!ELEMENT version (#PCDATA)>
+<!ELEMENT revision (#PCDATA)>
+<!ELEMENT compat (#PCDATA)>
+<!ELEMENT variable (path*)>
+<!ELEMENT path (#PCDATA)>
+<!ATTLIST path
+  install-name			CDATA		#IMPLIED
+  name				CDATA		#REQUIRED
+  version			CDATA		#IMPLIED>
+<!ELEMENT config (#PCDATA)>
+<!ATTLIST config
+  systype			CDATA		#IMPLIED
+  upgrade			CDATA		#IMPLIED>
+<!ELEMENT wrapper (#PCDATA)>
+<!ATTLIST wrapper
+  checksum			CDATA		#IMPLIED
+  checksum-type			CDATA		#IMPLIED
+  name				CDATA		#REQUIRED
+  path				CDATA		#REQUIRED
+  size				CDATA		#IMPLIED>
+<!ELEMENT subpkg (depend*, preinstall*, postinstall*, preremove*,
+postremove*)>
+<!ATTLIST subpkg
+  order				CDATA		#IMPLIED
+  type				CDATA		#REQUIRED>
+<!ELEMENT replace EMPTY>
+<!ATTLIST replace
+  install-name			CDATA		#REQUIRED
+  pkgname-base			CDATA		#REQUIRED
+  version			CDATA		#IMPLIED>
+<!ELEMENT files (file+)>
+<!ELEMENT file (#PCDATA)>
+<!ELEMENT depend (#PCDATA)>
+<!ATTLIST depend
+  group				CDATA		#IMPLIED
+  pkgname-base			CDATA		#IMPLIED
+  subpkg			CDATA		#IMPLIED
+  systype			CDATA		#IMPLIED
+  title				CDATA		#IMPLIED
+  user				CDATA		#IMPLIED>
+<!ELEMENT postinstall (#PCDATA)>
+<!ATTLIST postinstall
+  checksum			CDATA		#IMPLIED
+  checksum-type			CDATA		#IMPLIED
+  path				CDATA		#REQUIRED
+  size				CDATA		#IMPLIED
+  systype			CDATA		#IMPLIED>
+<!ELEMENT postremove (#PCDATA)>
+<!ATTLIST postremove
+  checksum			CDATA		#IMPLIED
+  checksum-type			CDATA		#IMPLIED
+  path				CDATA		#REQUIRED
+  size				CDATA		#IMPLIED
+  systype			CDATA		#IMPLIED>
+<!ELEMENT preinstall (#PCDATA)>
+<!ATTLIST preinstall
+  checksum			CDATA		#IMPLIED
+  checksum-type			CDATA		#IMPLIED
+  path				CDATA		#REQUIRED
+  size				CDATA		#IMPLIED
+  systype			CDATA		#IMPLIED>
+<!ELEMENT preremove (#PCDATA)>
+<!ATTLIST preremove
+  checksum			CDATA		#IMPLIED
+  checksum-type			CDATA		#IMPLIED
+  path				CDATA		#REQUIRED
+  size				CDATA		#IMPLIED
+  systype			CDATA		#IMPLIED>
+<!ELEMENT init (#PCDATA)>
+<!ATTLIST init
+  checksum			CDATA		#IMPLIED
+  checksum-type			CDATA		#IMPLIED
+  link-dest			CDATA		#IMPLIED
+  link-src			CDATA		#IMPLIED
+  mkssys			CDATA		#IMPLIED
+  mkssys-path			CDATA		#IMPLIED
+  mkssys-subsystem-name		CDATA		#IMPLIED
+  mkssys-subsystem-group	CDATA		#IMPLIED
+  mkssys-args			CDATA		#IMPLIED
+  mkssys-uid			CDATA		#IMPLIED
+  mkssys-use-signals		CDATA		#IMPLIED
+  mkssys-signal-normal-stop	CDATA		#IMPLIED
+  mkssys-signal-force-stop	CDATA		#IMPLIED
+  mkssys-restart		CDATA		#IMPLIED
+  name				CDATA		#IMPLIED
+  path				CDATA		#IMPLIED
+  size				CDATA		#IMPLIED
+  systype			CDATA		#IMPLIED>
+

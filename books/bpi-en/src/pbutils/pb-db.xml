@@ -1,0 +1,1135 @@
+pb-db.xml(4)                                                                                        pb-db.xml(4)
+
+
+
+NAME
+       pb-db.xml
+
+
+FILE FORMAT
+       The ``pb-db.xml'' file encapsulates version, dependency, and sub-package information about a package. The
+       information is used by pb to provide a generic front-end to build packages for AIX lpp, HP-UX depot, IRIX
+       inst, Solaris pkgadd, Tru64 UNIX setld, and the Redhat RPM package management systems.
+
+       The DTD for the XML file follows:
+         <!ELEMENT packages (package+)>
+         <!ELEMENT package ((category?, title?, vendor*,
+         description?, install-name?, variable*, wrapper*,
+         config*, subpkg*)?, package-manager+, changelog?)>
+         <!ATTLIST package
+           name                          CDATA           #REQUIRED
+           revision                      CDATA           '0'
+           version                       CDATA           #REQUIRED>
+         <!ELEMENT category (#PCDATA)>
+         <!ELEMENT title (#PCDATA)>
+         <!ELEMENT vendor (#PCDATA)>
+         <!ATTLIST vendor
+           subpkg                        CDATA           #IMPLIED>
+         <!ELEMENT description (#PCDATA)>
+         <!ATTLIST description
+           attribution                   CDATA           #IMPLIED>
+         <!ELEMENT changelog (change+)>
+         <!ELEMENT change (item+)>
+         <!ATTLIST change
+           author                        CDATA           #REQUIRED
+           date                          CDATA           #REQUIRED
+           email                         CDATA           #REQUIRED
+           revision                      CDATA           #REQUIRED>
+         <!ELEMENT item (para | screen | orderedlist | unorderedlist)*>
+         <!ELEMENT para (#PCDATA | command | ulink)*>
+         <!ELEMENT command (#PCDATA)>
+         <!ELEMENT ulink (#PCDATA)>
+         <!ATTLIST ulink
+           url                           CDATA           #REQUIRED>
+         <!ELEMENT screen (#PCDATA)>
+         <!ELEMENT orderedlist (item+)>
+         <!ATTLIST orderedlist
+           start-num                     CDATA           '1'
+           type                          (decimal
+                                         | lower-alpha
+                                         | upper-alpha
+                                         | lower-roman
+                                         | upper-roman)   decimal">"
+         <!ELEMENT unorderedlist (item+)>
+         <!ELEMENT package-manager (category?, title?, vendor*,
+         description?, install-name?, pkgname-base, config*, version,
+         revision, compat*, variable*, wrapper*, (init | config)*,
+         files*, subpkg*, replace*, changelog?)>
+         <!ATTLIST package-manager
+           name                          CDATA           #REQUIRED
+           systype                       CDATA           #IMPLIED>
+         <!ELEMENT install-name (#PCDATA)>
+         <!ATTLIST install-name
+           version                       CDATA           #IMPLIED>
+         <!ELEMENT pkgname-base (#PCDATA)>
+         <!ELEMENT version (#PCDATA)>
+         <!ELEMENT revision (#PCDATA)>
+         <!ELEMENT compat (#PCDATA)>
+         <!ELEMENT variable (path*)>
+         <!ELEMENT path (#PCDATA)>
+         <!ATTLIST path
+           install-name                  CDATA           #IMPLIED
+           name                          CDATA           #REQUIRED
+           version                       CDATA           #IMPLIED>
+         <!ELEMENT config (#PCDATA)>
+         <!ATTLIST config
+           systype                       CDATA           #IMPLIED
+           upgrade                       CDATA           #IMPLIED>
+         <!ELEMENT wrapper (#PCDATA)>
+         <!ATTLIST wrapper
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           name                          CDATA           #REQUIRED
+           path                          CDATA           #REQUIRED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+         <!ELEMENT subpkg (depend*, preinstall*, postinstall*,
+         preremove*, postremove*)>
+         <!ATTLIST subpkg
+           order                         CDATA           #IMPLIED
+           type                          CDATA           #REQUIRED>
+         <!ELEMENT replace EMPTY>
+         <!ATTLIST replace
+           install-name                  CDATA           #REQUIRED
+           pkgname-base                  CDATA           #REQUIRED
+           version                       CDATA           #IMPLIED>
+         <!ELEMENT files (file+)>
+         <!ELEMENT file (#PCDATA)>
+         <!ELEMENT depend (#PCDATA)>
+         <!ATTLIST depend
+           group                         CDATA           #IMPLIED
+           in-repo                       CDATA           #IMPLIED
+           pkgname                       CDATA           #IMPLIED
+           pkgname-base                  CDATA           #IMPLIED
+           subpkg                        CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED
+           title                         CDATA           #IMPLIED
+           user                          CDATA           #IMPLIED>
+         <!ELEMENT postinstall (#PCDATA)>
+         <!ATTLIST postinstall
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           path                          CDATA           #REQUIRED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+         <!ELEMENT postremove (#PCDATA)>
+         <!ATTLIST postremove
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           path                          CDATA           #REQUIRED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+         <!ELEMENT preinstall (#PCDATA)>
+         <!ATTLIST preinstall
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           path                          CDATA           #REQUIRED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+         <!ELEMENT preremove (#PCDATA)>
+         <!ATTLIST preremove
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           path                          CDATA           #REQUIRED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+         <!ELEMENT init (#PCDATA)>
+         <!ATTLIST init
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           link-dest                     CDATA           #IMPLIED
+           link-src                      CDATA           #IMPLIED
+           mkssys                        CDATA           #IMPLIED
+           mkssys-path                   CDATA           #IMPLIED
+           mkssys-subsystem-name         CDATA           #IMPLIED
+           mkssys-subsystem-group        CDATA           #IMPLIED
+           mkssys-args                   CDATA           #IMPLIED
+           mkssys-uid                    CDATA           #IMPLIED
+           mkssys-use-signals            CDATA           #IMPLIED
+           mkssys-signal-normal-stop     CDATA           #IMPLIED
+           mkssys-signal-force-stop      CDATA           #IMPLIED
+           mkssys-restart                CDATA           #IMPLIED
+           name                          CDATA           #IMPLIED
+           path                          CDATA           #IMPLIED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+
+
+GLOBAL VALUES
+       A  ``pb-db.xml''  file  consists of package-manager-specific (local) entries and non-package-manager-spe‐
+       cific (global) entries. The global entries allowed are specified in the following section of the DTD:
+         <!ELEMENT package ((category?, title?, vendor*,
+         description?, install-name?, variable*, wrapper*,
+         config*, subpkg*)?, package-manager+, changelog?)>
+
+       The local entries allowed are specified in the following section of the DTD:
+         <!ELEMENT package-manager (category?, title?, vendor*,
+         description?, install-name?, pkgname-base, config*, version,
+         revision, compat*, variable*, wrapper*, (init | config)*,
+         files*, subpkg*, replace*, changelog?)>
+
+       When a global entry is created, it immediately applies to all <package-manager> entries unless overridden
+       by  a  local  entry.  In  the example below, the installation path for the Xpm depot package is ``install
+       base/xpm'' and for the Xpm inst package is ``install base/xpm34'':
+         <?xml version="1.0"?>
+         <packages>
+           <package name="xpm" version="3.4k">
+             <category>System Environment/Libraries</category>
+             <title>XPM Image Library</title>
+             <vendor>GROUPE BULL</vendor>
+
+             <install-name>xpm</install-name>
+
+             <package-manager name="depot">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>3.4k</version>
+               <revision>3</revision>
+             </package-manager>
+
+             <package-manager name="inst">
+               <install-name>xpm34</install-name>
+
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>1</version>
+               <revision>6</revision>
+             </package-manager>
+           </package>
+         </packages>
+
+
+VARIABLE SUBSTITUTION
+       Variable substitution is performed on the XML ``<config>'', ``<depend>'', ``<init>'', ``<pkgname-base>'',
+       and ``<replace>'' element values or whenever the installation path and prefix are calculated. The follow‐
+       ing variables are substituted:
+
+       ${INSTALL_BASE}
+           The  value  of  ``${INSTALL_BASE}''  is  the  installation  base  directory,   specified   with   the
+           --install-base option or the install-base configuration variable.
+
+       ${INSTALL_NAME}
+           The value of ``${INSTALL_NAME}'' is the value of the ``<install-name>'' element.
+
+       ${INSTALL_PREFIX}
+           The  value  of  ``${INSTALL_PREFIX}''  is the concatenation of the installation base and installation
+           name.
+
+       ${VER}
+           The value of ``${VER}'' is the version of the package or that defined by the version attribute in the
+           ``<replace>'' element.
+
+       ${PKGNAME_BASE_PREFIX}
+           The  value  of  ``${PKGNAME_BASE_PREFIX}'' is the value specified by ``pkgname-base-prefix'' from the
+           configuration file. Supported only if the backend pkgbuild script supports the substitution.
+
+       These variables are usually used in the ``<config>'' element:
+         <?xml version="1.0"?>
+         <packages>
+           <package name="openssh" version="3.8.1p1">
+             <category>Applications/Cryptography</category>
+             <title>OpenSSH Secure Shell</title>
+             <vendor>OpenSSH Developers</vendor>
+
+             <package-manager name="inst">
+               <pkgname-base>TWWopenssh38</pkgname-base>
+               <version>1</version>
+               <revision>1</revision>
+
+               <config upgrade="1">/etc${INSTALL_PREFIX}/shosts.equiv</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_config</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_host_dsa_key</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_host_dsa_key.pub</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_host_key</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_host_key.pub</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_host_rsa_key</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_host_rsa_key.pub</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/ssh_known_hosts</config>
+               <config upgrade="1">/etc${INSTALL_PREFIX}/sshd_config</config>
+
+
+PREPROCESSING
+       Prior to being read, the XML file is preprocessed by  GPP,  the  Generic  Preprocessor  by  Denis  Auroux
+       <auroux@math.polytechnique.fr>. This is done to allow one XML file for various configurations.
+
+
+PACKAGE HEADER INFORMATION
+       Information  about  a  package  is  defined  by  the  following  elements: ``<package>'', ``<category>'',
+       ``<title>'', ``<vendor>'', and ``<description>''.
+
+       The ``<package>'' defines the package name, version, and revision and is required for pb  to  locate  the
+       package. The attributes allowed are:
+
+       name="VALUE"
+           Package name.
+
+       version="VALUE"
+           Package version.
+
+       revision="VALUE"
+           Package revision.
+
+       The  ``name'' and ``version'' values are used to match the <name>-<ver> input given to pb when a depot is
+       specified.  The ``revision'' attribute defaults to ``0'' and should be increased for each update  to  the
+       ``pb-db.xml'' file. The ``name'' and ``version'' attributes are required for all package managers.
+
+       The ``<category>'' element defines the RPM category type the application falls under. It is a requirement
+       only for the RPM package manager.
+
+       The ``<title>'' element defines the title of the package. It is required for all package managers.
+
+       The ``<vendor>'' element defines the vendor/author of the package. It is required for the HP-UX depot and
+       Solaris  pkgadd  package  managers.  The ``subpkg'' attribute allows definiting a different vendor/author
+       for a specific sub-package type, as might be required if installing a package like Python which  contains
+       contributions from the Python Development Team and assorted 3rd-party authors:
+         <?xml version="1.0"?>
+         <packages>
+           <package name="python" version="2.2.1">
+             <category>Development/Languages</category>
+             <title>Python Interpreter</title>
+             <vendor>Guido van Rossum</vendor>
+             <vendor subpkg="packages">3rd Parties</vendor>
+
+       The  ``<description>'' element contains a verbose description of the package. It is used by the RPM pack‐
+       age manager in the ``Description:'' tag for the runtime fileset.
+
+
+PACKAGE INFORMATION
+       The root directory containing the package files is defined by the ``<install-name>'' element globally  in
+       the ``<package>'' section or locally in the ``<package-manager>'' section. This element must exist.
+
+       The  ``<install-name>''  element  accepts an optional ``version'' attribute to override the value used to
+       substitute for the ``${VER}'' variable when determining the installation prefix.
+
+       The package name, version, and revision are defined in the ``<package-manager>'' section.
+
+       The ``<pkgname-base>'' defines the basename of the package name for the package manager. This is specific
+       to each package manager:
+         <?xml version="1.0"?>
+         <packages>
+           <package name="python" version="2.2.1">
+             <package-manager name="depot">
+               <pkgname-base>TWWpy221</pkgname-base>
+
+             <package-manager name="inst">
+               <pkgname-base>TWWpython221</pkgname-base>
+
+             <package-manager name="lpp">
+               <pkgname-base>TWW.python221</pkgname-base>
+
+             <package-manager name="pkgadd">
+               <pkgname-base>TWWpy221</pkgname-base>
+
+             <package-manager name="rpm4">
+               <pkgname-base>TWWpython221</pkgname-base>
+
+             <package-manager name="setld">
+               <pkgname-base>TWWPYTHON221</pkgname-base>
+
+       Note  that  certain package-managers might have restrictions on the characters in the package name or the
+       length. Should any of these restrictions be violated, pb will error with a message indicating so.
+
+       The ``<version>'' element defines the version of the package for the package manager. This is not  neces‐
+       sarily the same as the version of the package, given the constraints of the package management system:
+         <?xml version="1.0"?>
+         <packages>
+           <package name="xpm" version="3.4k">
+             <package-manager name="depot">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>3.4k</version>
+
+             <package-manager name="inst">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>1</version>
+
+             <package-manager name="lpp">
+               <pkgname-base>TWW.xpm</pkgname-base>
+               <version>3.4.0</version>
+
+             <package-manager name="pkgadd">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>3.4k</version>
+
+             <package-manager name="rpm4">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>3.4k</version>
+
+             <package-manager name="setld">
+               <pkgname-base>TWWXPM</pkgname-base>
+               <version>3.4k</version>
+
+       As  with  the  package name, syntax checks are performed on the package version to ensure correctness for
+       the package manager.
+
+       The ``<revision>'' element defines the revision of the package for the package manager. This is not  nec‐
+       essarily the same as the revision of the package. The package revision is updated when any change is made
+       to the ``pb-db.xml'' file. The package revision is updated when a change is made to  the  ``<package-man‐
+       ager>'' entry for the package or when the package files have been updated.
+
+
+DEPENDENCIES
+       Dependencies  are handled in a similar manner for all package managers.  The ``<subpkg>'' element defines
+       dependency information and user procedure scripts for the package (more  on  user  procedure  scripts  in
+       "USER PROCEDURE SCRIPTS" below). The DTD for the ``<subpkg>'' element follows:
+         <!ELEMENT subpkg (depend*, preinstall*, postinstall*,
+         preremove*, postremove*)>
+         <!ATTLIST subpkg
+           order                         CDATA           #IMPLIED
+           type                          CDATA           #REQUIRED>
+         <!ELEMENT depend (#PCDATA)>
+         <!ATTLIST depend
+           group                         CDATA           #IMPLIED
+           pkgname-base                  CDATA           #IMPLIED
+           subpkg                        CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED
+           title                         CDATA           #IMPLIED
+           user                          CDATA           #IMPLIED>
+
+       The  ``type''  attribute  in the ``<subpkg>'' element defines the sub-package type the dependency will be
+       created for. The ``order'' attribute in the ``<subpkg>'' element defines the order in  which  to  install
+       the  sub-package.  Sub-packages  with higher orders are installed first (beginning with order="n", "n-1",
+       ..., "0"). All sub-packages default to order="0".
+
+       The ``<depend>'' element accepts the following attributes:
+
+       pkgname-base="VALUE"
+           The basename (``<pkgname-base>'') of the dependent package.
+
+       subpkg="[conf|doc|libruntime|man|packages|runtime]"
+           Subpackage type to depend on. Usually, this will be  ``runtime''  containing  the  package  with  the
+           shared libraries or binaries needed by the package to run.
+
+       systype="VALUE"
+           If  a  dependency is needed on a specific platform, this attribute is a shell regex used to match the
+           GNU-triplet where the dependency should exist.
+
+       title="VALUE"
+           Title of dependent package defined by ``<title>'' element required by the Solaris pkgadd package man‐
+           ager.
+
+       The  value  of  the  ``<depend>'' element defines the version criteria to be met by a dependency. This is
+       defined by using the 'v' variable to match the version and 'r' variable to match the revision in conjunc‐
+       tion with the math comparison operators '>', '>=', '==', '<=', and '<'.
+
+         <?xml version="1.0"?>
+         <packages>
+           <package name="qt" version="3.1.1">
+             <package-manager name="depot">
+               <pkgname-base>TWWlibqt31</pkgname-base>
+               <version>3.1.1</version>
+               <revision>1</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWWfcp21"
+                   subpkg="runtime">v&gt;=2.1</depend>
+                 <depend pkgname-base="TWWgcc322"
+                   subpkg="libruntime">v&gt;=3.2.2</depend>
+               </subpkg>
+
+             <package-manager name="inst">
+               <pkgname-base>TWWlibqt31</pkgname-base>
+               <version>1</version>
+               <revision>0</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWWfcpackage21"
+                   subpkg="runtime">v&gt;=1</depend>
+                 <depend pkgname-base="TWWgcc322"
+                   subpkg="libruntime">v&gt;=1</depend>
+               </subpkg>
+
+             <package-manager name="lpp">
+               <pkgname-base>TWW.libqt31</pkgname-base>
+               <version>3.1.1</version>
+               <revision>1</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWW.fcpackage21"
+                   subpkg="runtime">v&gt;=2.1.0.1</depend>
+                 <depend pkgname-base="TWW.gcc2953"
+                   subpkg="libruntime">v&gt;=2.95.3.1</depend>
+               </subpkg>
+
+             <package-manager name="pkgadd">
+               <pkgname-base>TWWqt31</pkgname-base>
+               <version>3.1.1</version>
+               <revision>1</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWWfcp21"
+                   title="Font configuration and rendering"
+                   subpkg="runtime">v&gt;=2.1</depend>
+                 <depend pkgname-base="TWWgc322"
+                   title="GNU Compiler Collection"
+                   subpkg="libruntime">v&gt;=3.2.2</depend>
+               </subpkg>
+
+             <package-manager name="rpm4">
+               <pkgname-base>TWWlibqt31</pkgname-base>
+               <version>3.1.1</version>
+               <revision>1</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWWfcpackage21"
+                   subpkg="runtime">v&gt;=2.1</depend>
+                 <depend pkgname-base="TWWgcc2953"
+                   systype="*-aix*"
+                   subpkg="libruntime">v&gt;=2.95.3</depend>
+                 <depend pkgname-base="TWWgcc322"
+                   subpkg="libruntime">v&gt;=3.2.2</depend>
+               </subpkg>
+
+             <package-manager name="setld">
+               <pkgname-base>TWWLIBQT31</pkgname-base>
+               <version>3.1.1</version>
+               <revision>1</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWWFCPACKAGE21"
+                   subpkg="runtime">v&gt;=2.1</depend>
+                 <depend pkgname-base="TWWGCC322"
+                   subpkg="libruntime">v&gt;=3.2.2</depend>
+               </subpkg>
+
+
+PROCEDURE SCRIPT VARIABLES
+       Variables  can  be  set in procedure scripts with the ``<variable>'' element. The only supported variable
+       type is the ``<path>'' variable, used to set a variable to the installation prefix of a program. The  DTD
+       for the ``<variable>'' element follows:
+         <!ELEMENT variable (path*)>
+         <!ELEMENT path (#PCDATA)>
+         <!ATTLIST path
+           install-name                  CDATA           #IMPLIED
+           name                          CDATA           #REQUIRED
+           version                       CDATA           #IMPLIED>
+
+       install-name="VALUE"
+           The value to use when substituting for the package's installation name, ``${INSTALL_NAME}''.
+
+       name="VALUE"
+           The name of the variable in the procedure script.
+
+       version="VALUE"
+           The value to use when substituting for the package's version, ``${VER}''.
+
+       The name of the variable available to procedure scripts is
+       ``PB_VAR_name'. In addition to the default installation prefix
+       value assigned to the variable name, two additional variables are
+       defined, ``PB_VAR_RUN_name'' defined as the installation prefix
+       for the path at run time and ``PB_VAR_INST_name'' defined as the
+       installation prefix for the pat at install time. The latter two
+       variables should be used in procedure scripts to work around
+       differences in the installation path as a result of package relocation
+       during installation. If the path specified is an absolute path, these
+       three variables are equivalent.
+
+         <variable>
+           <path name="FONTS_CONF"
+             install-name="fcpackage22">etc/fonts.conf</path>
+           <path name="GS_FONT_DIR"
+             install-name="ghostscript70">share/fonts</path>
+         </variable>
+
+         <variable>
+           <path name="FONTS_CONF" install-name="fcpackage"
+             version="2.2">etc/fonts.conf</path>
+           <path name="GS_FONT_DIR" install-name="ghostscript"
+             version="7.07">share/fonts</path>
+         </variable>
+
+
+WRAPPER SCRIPTS
+       At  installation  time,  a procedure script is run to create symbolic links from the application ``bin'',
+       ``info'', ``man'', and ``sbin'' directories. When the ``bin'' and ``sbin'' links are  created,  a  script
+       can be created in place of the symbolic link to set certain variables needed by the program. This ``wrap‐
+       per'' script is either a shell script or compiled C program defined by the ``<wrapper>'' element with the
+       following attributes:
+         <!ELEMENT wrapper (#PCDATA)>
+         <!ATTLIST wrapper
+           checksum                      CDATA           #IMPLIED
+           checksum-type                 CDATA           #IMPLIED
+           name                          CDATA           #REQUIRED
+           path                          CDATA           #REQUIRED
+           size                          CDATA           #IMPLIED
+           systype                       CDATA           #IMPLIED>
+
+       checksum="VALUE"
+           Required  only  if  path is not specified and the wrapper script is included as the value of ``<wrap‐
+           per>''. This is the MD5 checksum of the wrapper script.
+
+       checksum-type="md5"
+           If the checksum attribute is defined, this attribute defines the type of checksum. MD5  checksum  are
+           the only allowed checksum type.
+
+       name="VALUE"
+           Name of program to replace with the wrapper script.
+
+       path="VALUE"
+           Path  of  wrapper  script.  If the wrapper script is not specified as the value of ``<wrapper>'', the
+           wrapper script is expected to be found relative to the directory where  the  ``pb-db.xml''  file  was
+           found.  Required.
+
+       size="VALUE"
+           File size of script. Required only if path not specified.
+
+         <?xml version="1.0"?>
+         <packages>
+           <package name="python" version="2.2.1">
+             <wrapper name="pydoc" path="python-wrapper.c"/>
+             <wrapper name="python" path="python-wrapper.c"/>
+             <wrapper name="python2.2" path="python-wrapper.c"/>
+
+         <?xml version="1.0"?>
+         <packages>
+           <package name="mgv" version="3.1.5">
+             <wrapper name="mgv" path="mgv-wrapper"/>
+
+       Wrapper  scripts with a pathname ending in `.c' are compiled and all other wrapper scripts are assumed to
+       be shell scripts. Both types of wrapper scripts are preprocessed with GPP like  the  ``pb-db.xml''  file.
+       Prior  to  being preprocessed with GPP, compiled wrapper scripts are passed through sed to substitute the
+       following variables:
+
+       @INSTALL_BASE@
+           The value of ``@INSTALL_BASE@'' is the installation base directory, specified with the --install-base
+           option or the install-base configuration variable.
+
+       @INSTALL_NAME@
+           The value of ``@INSTALL_NAME@'' is the value of the ``<install-name>'' element.
+
+       @INSTALL_PATH@
+           The  value  of  ``@INSTALL_PATH@''  is  the  expansion  (with variable substitution performed) of the
+           installation path, specified with the --install-path option or the install-path  configuration  vari‐
+           able.
+
+       Shell  wrapper  scripts  have  variable expansion performed at installation time with the following vari‐
+       ables:
+
+       ${LOCAL_BASE}
+           The value of ``${LOCAL_BASE}'' is the installation base directory, determined at package installation
+           time. Usually, this is the value of the --install-base option or the install-base configuration vari‐
+           able but might differ depending on the sophistication of the package management system.
+
+       ${INSTALL_PATH}
+           The value of ``${INSTALL_PATH}'' is the expansion  (with  variable  substitution  performed)  of  the
+           installation  path,  specified with the --install-path option or the install-path configuration vari‐
+           able. This is hard-coded into the link procedure script and cannot be changed at installation time.
+
+       Because variable substitution is performed at installation time, variables intended for use by the  wrap‐
+       per script must be quoted as in the following example of the MGv wrapper script:
+         #!/bin/sh
+         #
+         # Wrapper for MGv v3.1.5
+
+         APP_BIN=mgv
+         APP_HOME=${LOCAL_BASE}/${INSTALL_PATH}
+
+         # Include application resource file
+         if [ -n "\${XFILESEARCHPATH}" ]; then
+           XFILESEARCHPATH="\${APP_HOME}/share/mgv/3.1.5/%N:\${XFILESEARCHPATH}"
+         else
+           XFILESEARCHPATH="\${APP_HOME}/share/mgv/3.1.5/%N"
+         fi
+         export XFILESEARCHPATH
+
+         exec \${APP_HOME}/bin/\${APP_BIN} \${1+"\$@"}
+
+
+
+CONFIGURATION FILES
+       Configuration  files are handled by procedure scripts for all package management systems except RPM which
+       has enough intelligence to manage configuration files on its own.
+
+         <!ELEMENT config (#PCDATA)>
+         <!ATTLIST config
+           systype                   CDATA           #IMPLIED
+           upgrade                   CDATA           #IMPLIED>
+
+       The ``<config>'' element accepts the following attributes:
+
+       upgrade="[0|1]"
+           The ``upgrade'' attribute, when set to 1, allow the procedure script to  copy  a  configuration  file
+           with  sed  substitution  on  the  installation  prefix from the old installation directory to the new
+           installation directory, if upgrading a package to a newer version with a different installation  pre‐
+           fix.
+
+       systype="VALUE"
+           If  a  dependency is needed on a specific platform, this attribute is a shell regex used to match the
+           GNU-triplet where the dependency should exist.
+
+STARTUP (INIT) SCRIPTS
+       Startup scripts in ``/etc/init.d'' or  ``/sbin/init.d'',  depending  on  platform,  are  defined  by  the
+       ``<init>'' element, as well as init scripts for the AIX System Resource Controller:
+
+         <!ELEMENT init (#PCDATA)>
+         <!ATTLIST init
+           checksum                  CDATA           #IMPLIED
+           checksum-type             CDATA           #IMPLIED
+           link-dest                 CDATA           #IMPLIED
+           link-src                  CDATA           #IMPLIED
+           mkssys                    CDATA           #IMPLIED
+           mkssys-path               CDATA           #IMPLIED
+           mkssys-subsystem-name     CDATA           #IMPLIED
+           mkssys-subsystem-group    CDATA           #IMPLIED
+           mkssys-args               CDATA           #IMPLIED
+           mkssys-uid                CDATA           #IMPLIED
+           mkssys-use-signals        CDATA           #IMPLIED
+           mkssys-signal-normal-stop CDATA           #IMPLIED
+           mkssys-signal-force-stop  CDATA           #IMPLIED
+           mkssys-restart            CDATA           #IMPLIED
+           name                      CDATA           #IMPLIED
+           path                      CDATA           #IMPLIED
+           size                      CDATA           #IMPLIED
+           systype                   CDATA           #IMPLIED>
+
+       The ``<init>'' element accepts the following attributes:
+
+       checksum="VALUE"
+           Required only if path is not specified and the init script is included as the value of ``<wrapper>''.
+           This is the MD5 checksum of the init script.
+
+       checksum-type="md5"
+           If the checksum attribute is defined, this attribute defines the type of checksum. MD5  checksum  are
+           the only allowed checksum type.
+
+       link-dest="VALUE"
+           Destination  of link. On Solaris, a hard link is created. For all other platforms, a symbolic link is
+           created.
+
+       link-src="VALUE"
+           Path to link to. Should be the same path specified with the ``name'' attribute''.
+
+       mkssys="1"
+           Init script for AIX System Resource Controller.
+
+       mkssys-path="VALUE"
+           Path to daemon to start. Passed as the argument to -p for mkssys(1).
+
+       mkssys-subsystem-name="VALUE"
+           Name that uniquely identifies the daemon to start. Defaults to the value  of  the  ``<install-name>''
+           element. Passed as the argument to -s for mkssys(1).
+
+       mkssys-subsystem-group="VALUE"
+           Name  that  identifies  the  group to which the daemon belongs. The default is ``tww''. Passed as the
+           argument to -G for mkssys(1).
+
+       mkssys-args="VALUE"
+           Arguments to pass to daemon. Passed as the argument to -a for mkssys(1).
+
+       mkssys-uid="VALUE"
+           The uid used to start the daemon. Passed as the argument to -u for mkssys(1).
+
+       mkssys-use-signals="1"
+           Specifies that the daemon uses the signals communication method.  Passed as -S for mkssys(1).
+
+       mkssys-signal-normal-stop="VALUE"
+           Specifies the signal sent to the daemon when a normal stop of the daemon is requested. Passed as  the
+           argument to -n for mkssys(1).
+
+       mkssys-signal-force-stop="VALUE"
+           Specifies  the signal sent to the daemon when a forced stop of the daemon is requested. Passed as the
+           argument to -f for mkssys(1).
+
+       mkssys-restart="1"
+           Specify if the daemon is restarted if stopped abnormally. Passed as -R for mkssys(1).
+
+       name="VALUE"
+           Path to init script to create links to.
+
+       path="VALUE"
+           Path of init script. If the init script is not specified as the value of ``<init>'', the init  script
+           is expected to be found relative to the directory where the ``pb-db.xml'' file was found. Required.
+
+       size="VALUE"
+           File size of script. Required only if path not specified.
+
+       systype="VALUE"
+           If  a  dependency is needed on a specific platform, this attribute is a shell regex used to match the
+           GNU-triplet where the dependency should exist.
+
+       Init scripts with the ``name'' and ``path'' attributes are considered the  canonical  init  script.  Init
+       scripts  with  the  ``link-src'' and ``link-dest'' attributes are secondary scripts used by the different
+       run-levels at system startup. Init scripts are not managed as configuration files on startup  unless  the
+       path to the primary init script is specified by a ``<config>'' element.
+
+       Link  scripts for init scripts on Redhat Linux are created at runtime using chkconfig(8).  The run-levels
+       are specified in the wrapper script:
+         #!/bin/bash
+         #
+         # Startup script for OpenSSH 3.8.1p1.
+         #
+         # chkconfig: 2345 70 23
+         # description: OpenSSH Secure Shell daemon.
+         # pidfile: /var/run/sshd.pid
+
+       As with wrapper scripts, init scripts are preprocessed with GPP.
+
+       Init scripts have variable expansion performed when the package is created by substituting the  following
+       variables:
+
+       ${LOCAL_BASE}
+           The  value  of ``${LOCAL_BASE}'' is the installation base directory.  This is either the value of the
+           --install-base option or the install-base configuration variable.
+
+       ${INSTALL_PATH}
+           The value of ``${INSTALL_PATH}'' is the expansion  (with  variable  substitution  performed)  of  the
+           installation  path,  specified with the --install-path option or the install-path configuration vari‐
+           able.
+
+         <?xml version="1.0"?>
+         <packages>
+           <package name="openssh" version="3.8.1p1">
+             <package-manager name="depot">
+               <pkgname-base>TWWossh38</pkgname-base>
+               <init name="/sbin/init.d/TWWopenssh38"
+                 path="init-hpux"/>
+               <init link-src="/sbin/rc2.d/S662TWWopenssh38"
+                 link-dest="/sbin/init.d/TWWopenssh38"/>
+               <init link-src="/sbin/rc1.d/K268TWWopenssh38"
+                 link-dest="/sbin/init.d/TWWopenssh38"/>
+
+             <package-manager name="inst">
+               <pkgname-base>TWWopenssh38</pkgname-base>
+               <init name="/etc/init.d/TWWopenssh38"
+                 path="init-irix"/>
+               <init link-src="/etc/rc2.d/S82TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+               <init link-src="/etc/rc0.d/K28TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+
+             <package-manager name="lpp">
+               <pkgname-base>TWW.openssh38</pkgname-base>
+               <init mkssys="1"
+                 mkssys-path="${PB_INSTALL_PREFIX}/sbin/sshd"
+                 mkssys-args="-D"
+                 mkssys-uid="0"
+                 mkssys-use-signals="1"
+                 mkssys-signal-normal-stop="15"
+                 mkssys-signal-force-stop="9"
+                 mkssys-restart="1"/>
+
+             <package-manager name="pkgadd">
+               <pkgname-base>TWWssh38</pkgname-base>
+               <init name="/etc/init.d/TWWopenssh38"
+                 path="init-sol"/>
+               <init link-src="/etc/rc2.d/S80TWWopenssh38"
+                 link-dest="/etc/init.d/TWWopenssh38"/>
+               <init link-src="/etc/rc1.d/K18TWWopenssh38"
+                 link-dest="/etc/init.d/TWWopenssh38"/>
+               <init link-src="/etc/rc0.d/K18TWWopenssh38"
+                 link-dest="/etc/init.d/TWWopenssh38"/>
+               <config>/etc/init.d/TWWopenssh38</config>
+
+             <package-manager name="rpm4">
+               <pkgname-base>TWWopenssh38</pkgname-base>
+
+               <init systype="*-aix*"
+                 mkssys="1"
+                 mkssys-path="${PB_INSTALL_PREFIX}/sbin/sshd"
+                 mkssys-args="-D"
+                 mkssys-uid="0"
+                 mkssys-use-signals="1"
+                 mkssys-signal-normal-stop="15"
+                 mkssys-signal-force-stop="9"
+                 mkssys-restart="1"/>
+
+               <init systype="*-hpux*"
+                 name="/sbin/init.d/TWWopenssh38"
+                 path="init-hpux"/>
+               <init systype="*-hpux*"
+                 link-src="/sbin/rc2.d/S662TWWopenssh38"
+                 link-dest="/sbin/init.d/TWWopenssh38"/>
+               <init systype="*-hpux*"
+                 link-src="/sbin/rc1.d/K268TWWopenssh38"
+                 link-dest="/sbin/init.d/TWWopenssh38"/>
+
+               <init systype="*-irix*"
+                 name="/etc/init.d/TWWopenssh38"
+                 path="init-irix"/>
+               <init systype="*-irix*"
+                 link-src="/etc/rc2.d/S82TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+               <init systype="*-irix*"
+                 link-src="/etc/rc0.d/K28TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+
+               <init systype="*-linux*"
+                 name="/etc/rc.d/init.d/TWWopenssh38"
+                 path="init-linux"/>
+
+               <init systype="*-osf*"
+                 name="/sbin/init.d/TWWopenssh38"
+                 path="init-osf"/>
+               <init systype="*-osf*"
+                 link-src="/sbin/rc3.d/S82TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+               <init systype="*-osf*"
+                 link-src="/sbin/rc0.d/K22TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+
+               <init systype="*-solaris*"
+                 name="/etc/init.d/TWWopenssh38"
+                 path="init-sol"/>
+               <init systype="*-solaris*"
+                 link-src="/etc/rc2.d/S80TWWopenssh38"
+                 link-dest="/etc/init.d/TWWopenssh38"/>
+               <init systype="*-solaris*"
+                 link-src="/etc/rc1.d/K18TWWopenssh38"
+                 link-dest="/etc/init.d/TWWopenssh38"/>
+               <init systype="*-solaris*"
+                 link-src="/etc/rc0.d/K18TWWopenssh38"
+                 link-dest="/etc/init.d/TWWopenssh38"/>
+
+             <package-manager name="setld">
+               <pkgname-base>TWWOPENSSH38</pkgname-base>
+               <init name="/sbin/init.d/TWWopenssh38"
+                 path="init-osf"/>
+               <init link-src="/sbin/rc3.d/S82TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+               <init link-src="/sbin/rc0.d/K22TWWopenssh38"
+                 link-dest="../init.d/TWWopenssh38"/>
+               <config>/sbin/init.d/TWWopenssh38</config>
+
+
+USER PROCEDURE SCRIPTS
+       Custom procedure scripts for the postinstall, postremove, preinstall, and  preremove  phases  of  package
+       installation are specified using the ``<postinstall>'', ``<postremove>'', ``<preinstall>'', and ``<prere‐
+       move>'' elements of the ``<subpkg>'' element. User postinstall scripts are executed  after  configuration
+       files  are installed. For all other procedure scripts, the user script is executed before the link proce‐
+       dure script.
+
+       Procedure scripts are not, by default, cross-platform unless written as such. Care should be  taken  when
+       writing  scripts  to  address  the  behaviour of each package management system. Procedure scripts should
+       never exit unless a serious error has occurred because successive procedure scripts will not run.
+
+       The following variables are available to procedure scripts:
+
+       ${PB_PKGNAME}
+           The value of ``${PB_PKGNAME}'' is the name of the package.
+
+       ${PB_INSTALL_NAME}
+           The value of ``${PB_INSTALL_NAME}'' is the value of the install-name element.
+
+       ${PB_RUN_INSTALL_BASE}
+           The value of ``${PB_RUN_INSTALL_BASE}'' is the installation base directory the software  is  expected
+           to run from, specified with the --install-base option or the install-base configuration variable.
+
+       ${PB_RUN_INSTALL_PATH}
+           The  value  of  ``${PB_RUN_INSTALL_PATH}'' is the expansion (with variable substitution performed) of
+           the installation path, specified with the --install-path option  or  the  install-path  configuration
+           variable.
+
+       $PB_RUN_INSTALL_PREFIX
+           The  value  of  ``${PB_RUN_INSTALL_PATH}''  is  the  concatenation  of ``${PB_RUN_INSTALL_BASE}'' and
+           ``${PB_RUN_INSTALL_PATH}''.
+
+       $PB_INST_INSTALL_BASE
+           The value of ``${PB_INST_INSTALL_BASE}'' is the install-time installation  base,  possibly  prepended
+           with  an  alternate  root  directory  (if  using  ``-R'' for Solaris pkgadd), or a new path (if using
+           ``--relocate'' for RPM).
+
+       $PB_INST_INSTALL_PATH
+           The value of ``${PB_INST_INSTALL_PATH}'' is ``${PB_RUN_INSTALL_PATH}''.
+
+       $PB_INST_INSTALL_PREFIX
+           The value of ``${PB_INST_INSTALL_PATH}'' is  the  concatenation  of  ``${PB_INST_INSTALL_BASE}''  and
+           ``${PB_INST_INSTALL_PATH}''.
+
+       The following functions are available to procedure scripts:
+
+       verb_msg()
+           Use  verb_msg  to output messages during the installation process.  This function behaves differently
+           depending on the platform.
+
+              Solaris pkgadd (verb_msg -n [message type] [message])
+                  By default, if the message does not fit on one line, successive lines are indented  2  spaces.
+                  The  ``-n''  option disables the indent. Possible message types are ``info'' for informational
+                  messages and ``inst'' for messages important to the installation. All messages are preceded by
+                  the package name, a colon, and the message type in parentheses.
+                      verb_msg info "Linking /opt/TWWfsw/info/nano.info \
+                      to /opt/TWWfsw/nano12/info/nano.info"
+                      ${PB_PKGNAME}: (info) Linking /opt/TWWfsw/info/nano.info to
+                      ${PB_PKGNAME}: (info)   /opt/TWWfsw/nano12/info/nano.info
+
+                      verb_msg -n info "Linking /opt/TWWfsw/info/nano.info \
+                      to /opt/TWWfsw/nano12/info/nano.info"
+                      verb_msg -n info "   Continue info message"
+                      ${PB_PKGNAME}: (info) Linking /opt/TWWfsw/info/nano.info to
+                      ${PB_PKGNAME}: (info) /opt/TWWfsw/nano12/info/nano.info
+                      ${PB_PKGNAME}: (info)    Continue info message
+
+              HP-UX depot (verb_msg [message type] [message])
+                  The  HP-UX  package  manager  does  not  output  messages to STDOUT. Messages are saved in the
+                  ``/var/adm/sw/swagent.log'' file. Possible message types are ``note'' for  informational  mes‐
+                  sages,  ``error''  for errors, and ``cont'' to continue either a ``note'' or ``error'' without
+                  the message type in the margin. In the ``swagent.log'' file, message are formatted as:
+                      verb_msg note "Linking /opt/TWWfsw/info/nano.info to \
+                      /opt/TWWfsw/nano12/info/nano.info"
+                      NOTE:    Linking /opt/TWWfsw/info/nano.info to
+                               /opt/TWWfsw/nano12/info/nano.info
+
+                      verb_msg note "Linking /opt/TWWfsw/info/nano.info to \
+                      /opt/TWWfsw/nano12/info/nano.info"
+                      verb_msg cont "Continue note message"
+                      NOTE:    Linking /opt/TWWfsw/info/nano.info to
+                               /opt/TWWfsw/nano12/info/nano.info
+                               Continue note message
+
+              RPM (verb_msg [-n] [message type] [message])
+                  Follows the behavior of the command with Solaris pkgadd.
+
+       Example postinstall script to install a cron entry for the logrotate package:
+         <?xml version="1.0"?>
+         <packages>
+           <package name="logrotate" version="3.6.6" revision="1">
+             <install-name>logrotate36</install-name>
+
+             <package-manager name="depot">
+               <pkgname-base>TWWlogrot36</pkgname-base>
+               <version>3.6.6</version>
+               <revision>2</revision>
+               <subpkg type="runtime">
+                 <depend pkgname-base="TWWgzip13"
+                   subpkg="runtime">v&gt;=1.3.5</depend>
+                 <depend pkgname-base="TWWpopt17"
+                   subpkg="runtime">v&gt;=1.7</depend>
+                 <postinstall path="pkg/postinstall-hpux"
+                   checksum="fcf8a7439a0b767e279f26871a2f315d"
+                   checksum-type="md5" size="1163">
+         <![CDATA[
+         crontab -l 2>/dev/null | grep "/${PB_RUN_INSTALL_PATH}" >/dev/null || {
+           verb_msg note "Installing the following crontab entry:"
+           verb_msg cont "   25 6 * * * ${PB_RUN_INSTALL_PREFIX}/bin/logrotate"
+           verb_msg cont "   ${PB_RUN_INSTALL_PREFIX}/etc/logrotate.conf"
+
+           # get existing cron entry. if we get error "can't open
+           # your crontab file.", assume one doesn't exist.
+           _crontab=`crontab -l 2>&1 >/dev/null`
+           if [ $? -ne 0 ]; then
+             case "${_crontab}" in
+             *"open your crontab file"*)
+               ;;
+             *)
+               verb_msg note "\
+         Problems retrieving list of crontab entries. The error returned \
+         by crontab -l was: ${_crontab}. The command issued was:"
+               verb_msg cont "   crontab -l"
+               exit 1
+               ;;
+             esac
+           else
+             crontab -l >/tmp/$$
+           fi
+
+           cat >>/tmp/$$ <<_EOT_
+         # Rotate logs
+         25 6 * * * ${PB_RUN_INSTALL_PREFIX}/bin/logrotate \
+         ${PB_RUN_INSTALL_PREFIX}/etc/logrotate.conf
+         _EOT_
+
+           _crontab=`crontab /tmp/$$ 2>&1`
+           if [ $? -ne 0 ]; then
+             verb_msg note "\
+         Problems retrieving list of crontab entries. The error returned \
+         by crontab was: ${_crontab}. The command issued was:"
+             verb_msg cont "   crontab /tmp/$$"
+             exit 1
+           fi
+         }
+
+         :
+         ]]>
+                 </postinstall>
+               </subpkg>
+             </package-manager>
+
+
+REPLACING PREVIOUS PACKAGES
+       As the link procedure executes, it has the ability to remove links for older versions of a package if the
+       new  version  installs  to a separate directory. In addition configuration files defined with the ``<con‐
+       fig>'' element are copied from the most recent installed version.
+
+       The ``<init>'' element accepts the following attributes:
+
+       install-name="VALUE"
+           Value of ``<install-name>'' element from previous version.
+
+       pkgname-base="VALUE"
+           Value of ``<pkgname-base>'' element from previous version.
+
+       version="VALUE"
+           Version of package from previous version. Necessary if installation path contains ``${VER}'' replace‐
+           ment variable.
+
+         <?xml version="1.0"?>
+         <packages>
+           <package name="openssh" version="3.8.1p1">
+             <category>Applications/Cryptography</category>
+             <title>OpenSSH Secure Shell</title>
+             <vendor>OpenSSH Developers</vendor>
+
+             <install-name>openssh38</install-name>
+
+             <package-manager name="depot">
+               <pkgname-base>TWWossh38</pkgname-base>
+               <version>3.8.1p1</version>
+               <revision>1</revision>
+
+               <replace pkgname-base="TWWossh37"
+                 install-name="openssh37"/>
+               <replace pkgname-base="TWWossh36"
+                 install-name="openssh36"/>
+               <replace pkgname-base="TWWossh34"
+                 install-name="openssh34"/>
+             </package-manager>
+
+       The  ``<replace>''  element is also used when the ``upgrade'' attribute is specified for the ``<config>''
+       element to upgrade configuration scripts from a previous version.
+
+
+EXAMPLES
+         <?xml version="1.0"?>
+         <packages>
+           <package name="xpm" version="3.4k">
+             <category>System Environment/Libraries</category>
+             <title>XPM Image Library</title>
+             <vendor>GROUPE BULL</vendor>
+
+             <description attribution="FreeBSD Ports Collection">
+         XPM (X PixMap) is a format for storing/retrieving X pixmaps
+         to/from files.
+
+         The XPM Image Library contains a set of four functions,
+         similar to the X bitmap functions as defined in the Xlib:
+         XpmCreatePixmapFromData, XpmCreateDataFromPixmap,
+         XpmReadFileToPixmap and XpmWriteFileFromPixmap for
+         respectively including, storing, reading and writing this
+         format, plus four other: XpmCreateImageFromData,
+         XpmCreateDataFromImage, XpmReadFileToImage and
+         XpmWriteFileFromImage for working with images instead of
+         pixmaps.
+             </description>
+
+             <install-name>xpm</install-name>
+
+             <package-manager name="depot">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>3.4k</version>
+               <revision>3</revision>
+             </package-manager>
+
+             <package-manager name="inst">
+               <pkgname-base>TWWxpm</pkgname-base>
+               <version>1</version>
+               <revision>6</revision>
+             </package-manager>
+           </package>
+         </packages>
+
+
+FILES
+       /opt/TWWfsw/pbutils11/share/pb-db.dtd
+                           DTD
+
+
+SEE ALSO
+       depot-db.xml(4), pb(1)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                  2007 April 10                                     pb-db.xml(4)

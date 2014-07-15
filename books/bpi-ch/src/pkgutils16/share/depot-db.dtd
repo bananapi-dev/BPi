@@ -1,0 +1,12 @@
+<!ELEMENT depots (depot+)>
+<!ELEMENT depot EMPTY>
+<!ATTLIST depot
+  arch		CDATA		#IMPLIED
+  auto-include	CDATA		"1"
+  category	CDATA		#IMPLIED
+  dist-ver	CDATA		#IMPLIED
+  name		CDATA		#REQUIRED
+  program	CDATA		#IMPLIED
+  systype	CDATA		#IMPLIED
+  revision	CDATA		#IMPLIED
+  version	CDATA		#IMPLIED>

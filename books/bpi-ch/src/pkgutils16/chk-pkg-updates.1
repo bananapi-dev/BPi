@@ -1,0 +1,286 @@
+chk-pkg-updates(1)                                                                            chk-pkg-updates(1)
+
+
+
+NAME
+       chk-pkg-updates - Check for updates to installed packages
+
+
+SYNOPSIS
+       chk-pkg-updates [-e|--arg=<arg>] [--check-sig] [--check-uninstalled] [-c|--config=<path>]
+                       [-s|--depot=<depot>] [-G|--dist=<dist>] [-d|--dist-ver=<ver>] [-E|--egd-socket=<path>]
+                       [--gpg-keyring-path=<path>] [-h|--help] [--local-depot=<depot>] [--login=<login>]
+                       [--npkg-db=<dir>] [--password=<pass>] [--pkg-db=<dir>] [-f|--pkg-list=<path>]
+                       [-t|--pkg-type=<type>] [--proxy-host=<host>] [--proxy-login=<host>]
+                       [--proxy-password=<host>] [-R|--root=<path>] [--rpm-arch=<arch>] [--rpm-db=<dir>]
+                       [--sftp-known-hosts-path=<path>] [--sftp-private-key-path=<path>] [--subpkgs=<type>]
+                       [--systype=<type>] [--tmpbasedir=<path>] [--update-type=<type>] [-v|--verbose]
+                       [-V|--version] [<package>[-<ver>[-<rev>]]|<pkg-archive> ...]
+
+
+DESCRIPTION
+       The chk-pkg-updates utility checks for updates to installed packages.
+
+       Packages  are  specified by package name or ``<pkg-archive>''. If the version and revision number are not
+       specified, the most recent version of the package is selected from the list of  depots.  If  the  version
+       number  is  specified but the revision number is not, the most recent revision of the package is selected
+       from the list of depots. All versions of the package from the most recent available in the depot  to  the
+       oldest  installed  will be checked. If no packages are given, all packages in all depots are checked. The
+       ``<pkg-archive>'' path is given as either a local file or a URL (ftp, http, https, and sftp are  support‐
+       ed).
+
+       chk-pkg-updates  does  not  restrict checking for updates based on the instance of the installed package.
+       Because a future version might have a different package instance, all versions beginning with the  oldest
+       installed  version are checked. This usually displays more output that is necessary because more versions
+       in the depot are checked. However, it offers a more complete picture about what updates are available.
+
+       By default, only those packages installed are checked for updates. To check  updates  for  all  available
+       packages, the ``--check-uninstalled'' option must be specified.
+
+
+OPTIONS
+       -e, --arg <arg>
+            Additional  arguments  to  pass  to the package manager. The default action of chk-pkg-updates is to
+            pass minimal arguments to the package manager, depending  on  the  package  management  system.  For
+            pkgadd  under  Solaris, chk-pkg-updates uses a custom admin file via the ``-a'' option unless one is
+            specified using this option.  Multiple instances of this option can be used to pass additional argu‐
+            ments.
+
+
+       --check-sig
+            Verify  the  GPG  signature  of  the  package  and the ``depot-db.xml'' and ``pkg-db.xml'' files. If
+            chk-pkg-updates does not find the ``gpg'' binary in the search path, installation will fail. If  the
+            GPG signature verification fails, execution will stop. Before using this option, the public key used
+            to sign the package must be present in your keyring. It is not necessary for the public  key  to  be
+            signed for signature verification to work. However, it is recommended that you sign the public key.
+
+
+       --check-uninstalled
+            Do not restrict packages listed to those installed but to all available in the repository.
+
+
+       -c, --config <path>
+            Alternate     path     to     configuration    file.    The    default    path    is    ``/opt/TWWf‐
+            sw/pkgutils16/etc/pkgutils.conf''.  The  format  of  the  configuration  file   is   documented   in
+            pkgutils.conf(4).
+
+
+       -s, --depot <depot>
+            Software depot to search for packages. The path to the depot, ``<depot>'' is either a directory or a
+            URL. The following methods are supported: ``file://'', ``ftp://'',  ``http://'',  ``https://'',  and
+            ``sftp://''.  Multiple  software  depots can be specified. Packages with dependencies do not need to
+            have their dependencies available in the same depot. However, all instances of a package are expect‐
+            ed to be found in a given depot (thus, the man and runtime components of a package must exist in the
+            same depot). The depot specified, <depot>, is the top-level path to the depot.   Through  the  depot
+            database  file,  ``depot-db.xml'', chk-pkg-updates will descend into subdirectories of the depot and
+            search in these directories for additional packages. Any path with the packages must have the  pack‐
+            age  database  file,  ``pkg-db.xml''.  The  format  of  the  depot-db.xml  file is documented in de‐
+            pot-db.xml(4).  The format of the pkg-db.xml file is documented in pkg-db.xml(4).  The default  list
+            of depots is specified with the depots variable in the configuration file.
+
+
+       -G, --dist <dist>
+            Distribution  to  query  from. The default distribution is ``cd''. When specified, ``<dist>'' is ap‐
+            pended to the depot path. Also used to specify distribution-specific variables from  the  configura‐
+            tion file in ``dist-opts'' section.
+
+
+       -d, --dist-ver <ver>
+            Distribution version to use when specifying a remote depot (ftp://, http://, etc.) or a local repos‐
+            itory that mirrors a remote depot. The distribution version matches the release number for the pack‐
+            ages  to install. The special keyword ``latest'' can be used to specify the most recent distribution
+            version.
+
+
+       -E, --egd-socket <path>
+            Pathname to the socket the EGD/PRNGD daemons are listening on. This is needed only if the remote de‐
+            pot is being accessed through https and the platform does not have access to a /dev/random device.
+
+
+       --gpg-keyring-path <path>
+            Specifies  the  location of the GPG keyring. The usual location of the keyring is ~/.gnupg. However,
+            for security reasons, we encourage use of a dedicated directory for the keyring. This option is  re‐
+            quired if --check-sig is given.
+
+
+       -h, --help
+            Displays short description of program options and then exits the program.
+
+
+       --local-depot <depot>
+            Specifies  the  location  to a local directory to hold files retrieved from a remote repository. The
+            files in the local depot are never removed. As a result, ``<depot>'' can be used later with --depot.
+            If not specified, a temporary local depot is created and removed before chk-pkg-updates completes.
+
+
+       --login <login>
+            Login  for  a remote repository requiring authentication. For the ``ftp://'' method, a default login
+            id of ``anonymous'' is used when no login id is specified. For the ``http://''  method,  HTTP  BASIC
+            authentication is assumed.
+
+
+       --npkg-db <dir>
+            Path to Npkg database, if using the Npkg package management system.
+
+
+       --password <pass>
+            If the remote repository requires HTTP BASIC authentication, use ``<pass>'' as the password.
+
+
+       --pkg-db <path>
+            Path  to database of installed packages. In addition to the list of packages maintained by the pack‐
+            age management system, pkgutils maintains a list of packages installed with pkg-inst. This speeds up
+            pkg-info,  and  pkg-rm.  A  global package database was available in pkgutils 1.3.x which contains a
+            list of all packages ever built and their dependencies. Unfortunately, this file must be  read  with
+            every  invocation  of  chk-pkg-updates,  pkg-info, or pkg-rm making startup times slow. In addition,
+            maintaining this file for every package ever built  was  unwieldy.  If  ``<path>''  is  ''disable'',
+            pkg-db.xml entries are ignored.
+
+
+       -f, --pkg-list <file>
+            Read <file> for a list of packages. This option can be specified multiple times.
+
+
+       -t, --pkg-type <type>
+            Specify  an alternate package management system. If using the native package management system, this
+            is unnecessary. If this option is not specified, chk-pkg-updates automatically determines the  pack‐
+            age  management system based on the platform it is running on. If you are using a non-native package
+            management system such as Npkg or RPM, this option must be  specified.  The  available  <type>s  are
+            ``depot''  for  HP-UX  depot, ``inst'' for IRIX inst, ``lpp'' for AIX, ``npkg'' for Npkg, ``pkgadd''
+            for Solaris pkgadd, ``rpm' for Redhat RPM, and ``setld'' for Tru64 UNIX setld.
+
+
+       --proxy-host <host>
+            If a remote repository is specified, use ``<host>'' as the proxy server if a proxy  is  required  to
+            connect to remote site.
+
+
+       --proxy-login <login>
+            Login for a proxy server required to connect with a remote repository.  For the ``ftp://'' method, a
+            connection is initially made to the proxy host with the proxy login specified by ``<login>''.  If  a
+            login  to the remote repository is specified, the command ``USER <login>@<repository>'' is issued to
+            connect to the remote repository from the proxy server. If a login to the remote repository  is  not
+            specified, the command ``USER anonymous@<repository>'' is issued. If a password to the remote repos‐
+            itory is specified, the command `PASS <password>'' is issued to complete the connection to  the  re‐
+            mote  repository from the proxy server. If a password to the remote repository is not specified, the
+            command ``PASS anonymous'' is issued.  For the ``http://'' method, HTTP BASIC authentication is  as‐
+            sumed.
+
+
+       --proxy-password <pass>
+            If the proxy host requires HTTP BASIC authentication, use ``<pass>'' as the password.
+
+
+       -R, --root <path>
+            Alternate  root directory, as used when installing the package. This option is only applicable under
+            IRIX, HP-UX, and Solaris, whose package management systems allow specifying an alternate root direc‐
+            tory.
+
+
+       --rpm-arch <arch>
+            Specify  the  architecture type of the package being checked for RPM.  When installing RPM packages,
+            chk-pkg-updates automatically determines the name that RPM uses to denote the  architecture  of  the
+            RPM  package.  When installing RPM packages for a non-native host, such as installing HP-UX packages
+            on a Solaris host, it is not possible to determine the RPM architecture name. This option  overrides
+            the  automatic  detection.  Possible  values  for  <arch> are ``alpha'' for Tru64 UNIX, ``i386'' for
+            RHEL/x86, SLES/x86, and Solaris/x86, ``ia64'' for HP-UX/IA,  ``mipseb''  for  IRIX,  ``parisc''  for
+            HP-UX/PA, ``ppc'' for AIX, ``sparc'' for Solaris, and ``x86_64'' for RHEL/x86-64 and SLES/x86-64.
+
+
+       --rpm-db <dir>
+            Path to RPM database, if using the RPM package management system.
+
+
+       --sftp-known-hosts-path <path>
+            Path  to  ssh ``ssh_known_hosts'' file. When using the ``sftp://'' protocol for remote repositories,
+            remote hosts are authenticated against the RSA/DSA host keys in this file.
+
+
+       --sftp-private-key-path <path>
+            Path to ssh private key file for password-less access to remote repository. The private key must  be
+            created  without a password as chk-pkg-updates does not prompt for passwords. The corresponding pub‐
+            lic key file must exist in the ``.ssh/authorized_keys'' file on the remote host for either the  user
+            running chk-pkg-updates or for the user specified with ``--login'' option.
+
+
+       --subpkgs <type>
+            All  components  of  a package are checked except when a dependency is being installed in which case
+            only the component required for the dependency is installed. If only a few of the  available  compo‐
+            nents are to be installed, multiple instances of this option should be used. The available component
+            <type>s are ``conf'' for local configuration files, ``doc'' for online documentation, ``libruntime''
+            for  the  library  runtime, ``man'' for GNU info and man pages, ``packages'' for 3rd-party packages,
+            and ``runtime'' for the runtime component.
+
+
+       --systype <arch>
+            Used to specify the host architecture type. Needed only if installing for an architecture type  dif‐
+            ferent  from  the  host  architecture  type (e.g. RPM). It could also be used to install Solaris 2.6
+            packages on a Solaris 2.5.1 host. Unless the depot is remote or the depot points to a  mirror  of  a
+            remote repository, this option is unnecessary.
+
+
+       --tmpbasedir <path>
+            Temporary  base  directory to use when creating temporary files. Needed when package payload too big
+            for default temporary directory (/tmp or /var/tmp). The TMPDIR environment variable is set  to  this
+            path to propagate the use of the new temporary directory to the package management programs.
+
+
+       --update-type <type>
+            By  default, all update defined in the ``depot-db.xml'' file are searched for packages. The possible
+            values for ``<type>'' are ``errata'' for fixes to the distribution, ``packages''  for  all  packages
+            associated  with  a distribution, ``security'' for security fixes, ``support'' for support utilities
+            such as pkgutils, ``test'' for test releases, and ``updates'' for updates to the distribution.  When
+            an  update  occurs,  new  packages  will be installed into either ``errata'', ``security'', or ``up‐
+            dates''.
+
+
+       -v, --verbose
+            Provide more verbose diagnostics during program execution. The second level (option specified twice)
+            prints  out  information  about what depots are being read and any sub-depots being recursed into as
+            the ``depot-db.xml'' file is parsed.
+
+
+       -V, --version
+            Display version number of chk-pkg-updates and exit.
+
+
+EXAMPLES
+       Checking for updates to Tcl on a Solaris host with Tcl 8.3.5 installed:
+         $ chk-pkg-updates --depot http://updates.thewrittenword.com \
+         --dist-ver=latest --login=<login> --password=<password> tcl
+         tcl
+           checking if v8.4.1-2 installed ... no
+             depot containing this package ...
+               http://updates.thewrittenword.com
+             checking if update available ... yes (errata)
+               TWWtcl84m (v8.4.1-2)
+               TWWtcl84p (v8.4.1-2)
+               TWWtcl84u (v8.4.1-2)
+           checking if v8.4.1-1 installed ... no
+             depot containing this package ...
+               http://updates.thewrittenword.com
+             checking if update available ... yes (packages)
+               TWWtcl84m (v8.4.1-1)
+               TWWtcl84p (v8.4.1-1)
+               TWWtcl84u (v8.4.1-1)
+           checking if v8.3.5-1 installed ... yes
+             depot containing this package ...
+               http://updates.thewrittenword.com
+             checking if update available ... no
+
+
+SEE ALSO
+       pkg-info(1), pkg-inst(1), pkgutils.conf(4)
+
+
+FILES
+       /var/opt/TWWfsw/pkgutils16
+                           Default path for pkg-db.xml package database files (cf.  --pkg-db)
+
+
+AUTHOR
+       The Written Word <info@thewrittenword.com>
+
+
+
+                                                2010 February 26                              chk-pkg-updates(1)

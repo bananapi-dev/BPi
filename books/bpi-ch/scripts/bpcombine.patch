@@ -1,0 +1,3861 @@
+diff -ur linux-sunxi.vanilla/drivers/gpio/gpio-sunxi.c linux-sunxi.patched/drivers/gpio/gpio-sunxi.c
+--- linux-sunxi.vanilla/drivers/gpio/gpio-sunxi.c	2014-05-11 11:35:23.284595155 +0100
++++ linux-sunxi.patched/drivers/gpio/gpio-sunxi.c	2014-05-11 13:19:14.610256729 +0100
+@@ -182,11 +182,9 @@
+ 	if ((offset > chip->ngpio - 1) || (offset < 0))
+ 		return -EINVAL;
+ 
+-	/* Set sysfs exported gpio name (example "gpio254_ph20") */
+-	sprintf((char *)(chip->names[offset]), "gpio%d_p%c%d",
+-		offset+chip->base,
+-		'a'+sgpio->data[offset].info.port-1,
+-		sgpio->data[offset].info.port_num);
++	/* Set sysfs exported gpio name (example "gpio254") */
++	sprintf((char *)(chip->names[offset]), "gpio%d",
++		offset+chip->base);
+ 
+ 	sgpio->data[offset].gpio_handler = gpio_request_ex("gpio_para",
+ 						sgpio->data[offset].pin_name);
+diff -rcNP linux-sunxi.vanilla/drivers/net/usb/ax88179_178a.c linux-sunxi.patched/drivers/net/usb/ax88179_178a.c
+*** linux-sunxi.vanilla/drivers/net/usb/ax88179_178a.c	1970-01-01 01:00:00.000000000 +0100
+--- linux-sunxi.patched/drivers/net/usb/ax88179_178a.c	2014-04-18 08:19:15.000000000 +0100
+***************
+*** 0 ****
+--- 1,1933 ----
++ /*
++  * ASIX AX88179 based USB 3.0 Ethernet Devices
++  * Copyright (C) 2003-2005 David Hollis <dhollis@davehollis.com>
++  * Copyright (C) 2005 Phil Chang <pchang23@sbcglobal.net>
++  * Copyright (c) 2002-2003 TiVo Inc.
++  *
++  * This program is free software; you can redistribute it and/or modify
++  * it under the terms of the GNU General Public License as published by
++  * the Free Software Foundation; either version 2 of the License, or
++  * (at your option) any later version.
++  *
++  * This program is distributed in the hope that it will be useful,
++  * but WITHOUT ANY WARRANTY; without even the implied warranty of
++  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++  * GNU General Public License for more details.
++  *
++  * You should have received a copy of the GNU General Public License
++  * along with this program; if not, write to the Free Software
++  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++  */
++ 
++ /* debug messages, extra info */
++ /* #define	DEBUG */
++ 
++ #include <linux/version.h>
++ /*#include <linux/config.h>*/
++ #ifdef	CONFIG_USB_DEBUG
++ #define DEBUG
++ #endif
++ #include <linux/module.h>
++ #include <linux/kmod.h>
++ #include <linux/sched.h>
++ #include <linux/init.h>
++ #include <linux/netdevice.h>
++ #include <linux/etherdevice.h>
++ #include <linux/ethtool.h>
++ #include <linux/workqueue.h>
++ #include <linux/mii.h>
++ #include <linux/usb.h>
++ #include <linux/crc32.h>
++ #include <linux/if_vlan.h>
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)
++ #include <linux/usb/usbnet.h>
++ #else
++ #include <../drivers/usb/net/usbnet.h>
++ #endif
++ 
++ #include "ax88179_178a.h"
++ 
++ #define DRV_VERSION	"1.10.0"
++ 
++ static char version[] =
++ KERN_INFO "ASIX USB Ethernet Adapter:v" DRV_VERSION
++ 	" " __TIME__ " " __DATE__ "\n"
++ "		http://www.asix.com.tw\n";
++ 
++ static int msg_enable;
++ module_param(msg_enable, int, 0);
++ MODULE_PARM_DESC(msg_enable, "usbnet msg_enable");
++ 
++ static int bsize = -1;
++ module_param(bsize, int, 0);
++ MODULE_PARM_DESC(bsize, "RX Bulk IN Queue Size");
++ 
++ static int ifg = -1;
++ module_param(ifg, int, 0);
++ MODULE_PARM_DESC(ifg, "RX Bulk IN Inter Frame Gap");
++ 
++ 
++ /* ASIX AX88179/178A based USB 3.0/2.0 Gigabit Ethernet Devices */
++ 
++ static int __ax88179_read_cmd(struct usbnet *dev, u8 cmd, u16 value, u16 index,
++ 			      u16 size, void *data, int in_pm)
++ {
++ 	int ret;
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
++ 	int (*fn)(struct usbnet *, u8, u8, u16, u16, void *, u16);
++ 
++ 	BUG_ON(!dev);
++ 
++ 	if (!in_pm)
++ 		fn = usbnet_read_cmd;
++ 	else
++ 		fn = usbnet_read_cmd_nopm;
++ 
++ 	ret = fn(dev, cmd, USB_DIR_IN | USB_TYPE_VENDOR |
++ 		 USB_RECIP_DEVICE, value, index, data, size);
++ 
++ 	if (unlikely(ret < 0))
++ 		netdev_warn(dev->net, "Failed to read reg index 0x%04x: %d\n",
++ 			    index, ret);
++ #else
++ 	ret = usb_control_msg(
++ 		dev->udev,
++ 		usb_rcvctrlpipe(dev->udev, 0),
++ 		cmd,
++ 		USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
++ 		value,
++ 		index,
++ 		data,
++ 		size,
++ 		USB_CTRL_GET_TIMEOUT);
++ #endif
++ 	return ret;
++ }
++ 
++ static int __ax88179_write_cmd(struct usbnet *dev, u8 cmd, u16 value, u16 index,
++ 			       u16 size, void *data, int in_pm)
++ {
++ 	int ret;
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
++ 	int (*fn)(struct usbnet *, u8, u8, u16, u16, const void *, u16);
++ 
++ 	BUG_ON(!dev);
++ 
++ 	if (!in_pm)
++ 		fn = usbnet_write_cmd;
++ 	else
++ 		fn = usbnet_write_cmd_nopm;
++ 
++ 	ret = fn(dev, cmd, USB_DIR_OUT | USB_TYPE_VENDOR |
++ 		 USB_RECIP_DEVICE, value, index, data, size);
++ 
++ 	if (unlikely(ret < 0))
++ 		netdev_warn(dev->net, "Failed to write reg index 0x%04x: %d\n",
++ 			    index, ret);
++ #else
++ 	ret = usb_control_msg(
++ 		dev->udev,
++ 		usb_sndctrlpipe(dev->udev, 0),
++ 		cmd,
++ 		USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
++ 		value,
++ 		index,
++ 		data,
++ 		size,
++ 		USB_CTRL_SET_TIMEOUT);
++ 
++ #endif
++ 	return ret;
++ }
++ 
++ static int ax88179_read_cmd_nopm(struct usbnet *dev, u8 cmd, u16 value,
++ 				 u16 index, u16 size, void *data, int eflag)
++ {
++ 	int ret;
++ 
++ 	if (eflag && (2 == size)) {
++ 		u16 buf = 0;
++ 		ret = __ax88179_read_cmd(dev, cmd, value, index, size, &buf, 1);
++ 		le16_to_cpus(&buf);
++ 		*((u16 *)data) = buf;
++ 	} else if (eflag && (4 == size)) {
++ 		u32 buf = 0;
++ 		ret = __ax88179_read_cmd(dev, cmd, value, index, size, &buf, 1);
++ 		le32_to_cpus(&buf);
++ 		*((u32 *)data) = buf;
++ 	} else {
++ 		ret = __ax88179_read_cmd(dev, cmd, value, index, size, data, 1);
++ 	}
++ 
++ 	return ret;
++ }
++ 
++ static int ax88179_write_cmd_nopm(struct usbnet *dev, u8 cmd, u16 value,
++ 				  u16 index, u16 size, void *data)
++ {
++ 	int ret;
++ 
++ 	if (2 == size) {
++ 		u16 buf = 0;
++ 		buf = *((u16 *)data);
++ 		cpu_to_le16s(&buf);
++ 		ret = __ax88179_write_cmd(dev, cmd, value, index,
++ 					  size, &buf, 1);
++ 	} else {
++ 		ret = __ax88179_write_cmd(dev, cmd, value, index,
++ 					  size, data, 1);
++ 	}
++ 
++ 	return ret;
++ }
++ 
++ static int ax88179_read_cmd(struct usbnet *dev, u8 cmd, u16 value, u16 index,
++ 			    u16 size, void *data, int eflag)
++ {
++ 
++ 	int ret;
++ 
++ 	if (eflag && (2 == size)) {
++ 		u16 buf = 0;
++ 		ret = __ax88179_read_cmd(dev, cmd, value, index, size, &buf, 0);
++ 		le16_to_cpus(&buf);
++ 		*((u16 *)data) = buf;
++ 	} else if (eflag && (4 == size)) {
++ 		u32 buf = 0;
++ 		ret = __ax88179_read_cmd(dev, cmd, value, index, size, &buf, 0);
++ 		le32_to_cpus(&buf);
++ 		*((u32 *)data) = buf;
++ 	} else {
++ 		ret = __ax88179_read_cmd(dev, cmd, value, index, size, data, 0);
++ 	}
++ 
++ 	return ret;
++ }
++ 
++ static int ax88179_write_cmd(struct usbnet *dev, u8 cmd, u16 value, u16 index,
++ 			     u16 size, void *data)
++ {
++ 	int ret;
++ 
++ 	if (2 == size) {
++ 		u16 buf = 0;
++ 		buf = *((u16 *)data);
++ 		cpu_to_le16s(&buf);
++ 		ret = __ax88179_write_cmd(dev, cmd, value, index,
++ 					  size, &buf, 0);
++ 	} else {
++ 		ret = __ax88179_write_cmd(dev, cmd, value, index,
++ 					  size, data, 0);
++ 	}
++ 
++ 	return ret;
++ }
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
++ static void ax88179_write_cmd_async(struct usbnet *dev, u8 cmd, u16 value,
++ 				    u16 index, u16 size, void *data)
++ {
++ 	if (2 == size) {
++ 		u16 buf = 0;
++ 		buf = *((u16 *)data);
++ 		cpu_to_le16s(&buf);
++ 		usbnet_write_cmd_async(dev, cmd, USB_DIR_OUT | USB_TYPE_VENDOR |
++ 			       USB_RECIP_DEVICE, value, index, &buf, size);
++ 	} else {
++ 		usbnet_write_cmd_async(dev, cmd, USB_DIR_OUT | USB_TYPE_VENDOR |
++ 			       USB_RECIP_DEVICE, value, index, data, size);
++ 	}
++ }
++ #else
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 20)
++ static void ax88179_async_cmd_callback(struct urb *urb, struct pt_regs *regs)
++ #else
++ static void ax88179_async_cmd_callback(struct urb *urb)
++ #endif
++ {
++ 	struct usb_ctrlrequest *req = (struct usb_ctrlrequest *)urb->context;
++ 
++ 	if (urb->status < 0)
++ 		printk(KERN_ERR "ax88179_async_cmd_callback() failed with %d",
++ 		       urb->status);
++ 	kfree(req);
++ 	usb_free_urb(urb);
++ }
++ 
++ static void
++ ax88179_write_cmd_async(struct usbnet *dev, u8 cmd, u16 value, u16 index,
++ 				    u16 size, void *data)
++ {
++ 	struct usb_ctrlrequest *req = NULL;
++ 	int status = 0;
++ 	struct urb *urb = NULL;
++ 	void *buf = NULL;
++ 	u16 buf_le = 0;
++ 
++ 	if (2 == size) {
++ 		buf_le = *((u16 *)data);
++ 		cpu_to_le16s(&buf_le);
++ 	}
++ 
++ 	urb = usb_alloc_urb(0, GFP_ATOMIC);
++ 	if (urb == NULL) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_err(dev->net, "Error allocating URB in write_cmd_async!");
++ #else
++ 		deverr(dev, "Error allocating URB in write_cmd_async!");
++ #endif
++ 		return;
++ 	}
++ 
++ 	if (data) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
++ 		if (2 == size)
++ 			buf = kmemdup(&buf_le, size, GFP_ATOMIC);
++ 		else
++ 			buf = kmemdup(data, size, GFP_ATOMIC);
++ #else
++ 			buf = kmalloc(size, GFP_ATOMIC);
++ #endif
++ 
++ 		if (!buf) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 			netdev_err(dev->net, "Error allocating buffer in %s!\n",
++ 				   __func__);
++ #else
++ 		deverr(dev,  "Error allocating buffer in %s!\n", __func__);
++ #endif
++ 			return;
++ 		} else {
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 19)
++ 			if (2 == size)
++ 				memcpy(buf, &buf_le, size);
++ 			else
++ 				memcpy(buf, data, size);
++ #endif
++ 		}
++ 	}
++ 
++ 	req = kmalloc(sizeof(struct usb_ctrlrequest), GFP_ATOMIC);
++ 	if (req  == NULL) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_err(dev->net, "Failed to allocate memory for control request");
++ #else
++ 		deverr(dev, "Failed to allocate memory for control request");
++ #endif
++ 		usb_free_urb(urb);
++ 		return;
++ 	}
++ 
++ 	req->bRequestType = USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE;
++ 	req->bRequest = cmd;
++ 	req->wValue = cpu_to_le16(value);
++ 	req->wIndex = cpu_to_le16(index);
++ 	req->wLength = cpu_to_le16(size);
++ 
++ 	usb_fill_control_urb(urb, dev->udev,
++ 			     usb_sndctrlpipe(dev->udev, 0),
++ 			     (void *)req, buf, size,
++ 			     ax88179_async_cmd_callback, req);
++ 
++ 	status = usb_submit_urb(urb, GFP_ATOMIC);
++ 	if (status < 0) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_err(dev->net, "Error submitting the control message: status=%d",
++ 			   status);
++ #else
++ 		deverr(dev, "Error submitting the control message: status=%d",
++ 		       status);
++ #endif
++ 		kfree(req);
++ 		usb_free_urb(urb);
++ 	}
++ }
++ #endif
++ 
++ static void ax88179_status(struct usbnet *dev, struct urb *urb)
++ {
++ 	struct ax88179_int_data *event = NULL;
++ 	int link = 0;
++ 
++ 	if (urb->actual_length < 8)
++ 		return;
++ 
++ 	event = urb->transfer_buffer;
++ 	link = event->link & AX_INT_PPLS_LINK;
++ 
++ 	if (netif_carrier_ok(dev->net) != link) {
++ 		if (link) {
++ 			netif_carrier_on(dev->net);
++ 			usbnet_defer_kevent(dev, EVENT_LINK_RESET);
++ 		}
++ 		else
++ 			netif_carrier_off(dev->net);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_info(dev->net, "ax88179_178a - Link status is: %d\n",
++ 			    link);
++ #else
++ 		devinfo(dev, "ax88179_178a - Link status is: %d\n", link);
++ #endif
++ 	}
++ }
++ 
++ static int ax88179_mdio_read(struct net_device *netdev, int phy_id, int loc)
++ {
++ 	struct usbnet *dev = netdev_priv(netdev);
++ 	u16 res = 0;
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_PHY, phy_id, (__u16)loc, 2, &res, 1);
++ 	return res;
++ }
++ 
++ static void ax88179_mdio_write(struct net_device *netdev, int phy_id, int loc,
++ 			       int val)
++ {
++ 	struct usbnet *dev = netdev_priv(netdev);
++ 	u16 res = (u16)val;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_PHY, phy_id, (__u16)loc, 2, &res);
++ }
++ 
++ static int ax88179_suspend(struct usb_interface *intf,
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 10)
++ 			   pm_message_t message)
++ #else
++ 			   u32 message)
++ #endif
++ {
++ 	struct usbnet *dev = usb_get_intfdata(intf);
++ 	u16 tmp16 = 0;
++ 	u8 tmp8 = 0;
++ 
++ 	usbnet_suspend(intf, message);
++ 
++ 	/* Disable RX path */
++ 	ax88179_read_cmd_nopm(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			      2, 2, &tmp16, 1);
++ 	tmp16 &= ~AX_MEDIUM_RECEIVE_EN;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC,  AX_MEDIUM_STATUS_MODE,
++ 			       2, 2, &tmp16);
++ 
++ 	/* Force bz */
++ 	ax88179_read_cmd_nopm(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL,
++ 			      2, 2, &tmp16, 1);
++ 	tmp16 |= AX_PHYPWR_RSTCTL_BZ | AX_PHYPWR_RSTCTL_IPRL;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL,
++ 			       2, 2, &tmp16);
++ 
++ 	/* change clock */
++ 	tmp8 = 0;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_CLK_SELECT, 1, 1, &tmp8);
++ 
++ 	/* Configure RX control register => stop operation */
++ 	tmp16 = AX_RX_CTL_STOP;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_RX_CTL, 2, 2, &tmp16);
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_resume(struct usb_interface *intf)
++ {
++ 	struct usbnet *dev = usb_get_intfdata(intf);
++ 	u16 tmp16 = 0;
++ 	u8 tmp8 = 0;
++ 
++ 	netif_carrier_off(dev->net);
++ 
++ 	/* Power up ethernet PHY */
++ 	tmp16 = 0;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL,
++ 			       2, 2, &tmp16);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
++ 	usleep_range(1000, 2000);
++ #else
++ 	msleep(1);
++ #endif
++ 	tmp16 = AX_PHYPWR_RSTCTL_IPRL;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL,
++ 			       2, 2, &tmp16);
++ 	msleep(200);
++ 
++ 	/* Ethernet PHY Auto Detach*/
++ 	ax88179_AutoDetach(dev, 1);
++ 
++ 	/* change clock */
++ 	ax88179_read_cmd_nopm(dev, AX_ACCESS_MAC,  AX_CLK_SELECT,
++ 			      1, 1, &tmp8, 0);
++ 	tmp8 |= AX_CLK_SELECT_ACS | AX_CLK_SELECT_BCS;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_CLK_SELECT, 1, 1, &tmp8);
++ 	msleep(100);
++ 
++ 	/* Configure RX control register => start operation */
++ 	tmp16 = AX_RX_CTL_DROPCRCERR | AX_RX_CTL_START | AX_RX_CTL_AP |
++ 		 AX_RX_CTL_AMALL | AX_RX_CTL_AB;
++ 	if (NET_IP_ALIGN == 0)
++ 		tmp16 |= AX_RX_CTL_IPE;
++ 	ax88179_write_cmd_nopm(dev, AX_ACCESS_MAC, AX_RX_CTL, 2, 2, &tmp16);
++ 
++ 	return usbnet_resume(intf);
++ }
++ 
++ static void
++ ax88179_get_wol(struct net_device *net, struct ethtool_wolinfo *wolinfo)
++ {
++ 
++ 	struct usbnet *dev = netdev_priv(net);
++ 	u8 *opt = NULL;
++ 
++ 	opt = kmalloc(1, GFP_KERNEL);
++ 	if (!opt)
++ 		return;
++ 
++ 	if (ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MONITOR_MODE,
++ 			     1, 1, opt, 0) < 0) {
++ 		wolinfo->supported = 0;
++ 		wolinfo->wolopts = 0;
++ 		return;
++ 	}
++ 
++ 	wolinfo->supported = WAKE_PHY | WAKE_MAGIC;
++ 
++ 	if (*opt & AX_MONITOR_MODE_RWLC)
++ 		wolinfo->wolopts |= WAKE_PHY;
++ 	if (*opt & AX_MONITOR_MODE_RWMP)
++ 		wolinfo->wolopts |= WAKE_MAGIC;
++ 
++ 	kfree(opt);
++ }
++ 
++ static int
++ ax88179_set_wol(struct net_device *net, struct ethtool_wolinfo *wolinfo)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	u8 *opt = NULL;
++ 
++ 	opt = kmalloc(1, GFP_KERNEL);
++ 	if (!opt)
++ 		return -ENOMEM;
++ 
++ 	*opt = 0;
++ 
++ 	if (wolinfo->wolopts & WAKE_PHY)
++ 		*opt |= AX_MONITOR_MODE_RWLC;
++ 	else
++ 		*opt &= ~AX_MONITOR_MODE_RWLC;
++ 
++ 	if (wolinfo->wolopts & WAKE_MAGIC)
++ 		*opt |= AX_MONITOR_MODE_RWMP;
++ 	else
++ 		*opt &= ~AX_MONITOR_MODE_RWMP;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MONITOR_MODE, 1, 1, opt);
++ 
++ 	kfree(opt);
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_get_eeprom_len(struct net_device *net)
++ {
++ 	return AX_EEPROM_LEN;
++ }
++ 
++ static int
++ ax88179_get_eeprom(struct net_device *net, struct ethtool_eeprom *eeprom,
++ 		   u8 *data)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	u16 *eeprom_buff = NULL;
++ 	int first_word = 0, last_word = 0;
++ 	int i = 0;
++ 
++ 	if (eeprom->len == 0)
++ 		return -EINVAL;
++ 
++ 	eeprom->magic = AX88179_EEPROM_MAGIC;
++ 
++ 	first_word = eeprom->offset >> 1;
++ 	last_word = (eeprom->offset + eeprom->len - 1) >> 1;
++ 	eeprom_buff = kmalloc(sizeof(u16) * (last_word - first_word + 1),
++ 			      GFP_KERNEL);
++ 	if (!eeprom_buff)
++ 		return -ENOMEM;
++ 
++ 	/* ax88179/178A returns 2 bytes from eeprom on read */
++ 	for (i = first_word; i <= last_word; i++) {
++ 		if (ax88179_read_cmd(dev, AX_ACCESS_EEPROM, i, 1, 2,
++ 				     &(eeprom_buff[i - first_word]), 0) < 0) {
++ 			kfree(eeprom_buff);
++ 			return -EIO;
++ 		}
++ 	}
++ 
++ 	memcpy(data, (u8 *)eeprom_buff + (eeprom->offset & 1), eeprom->len);
++ 	kfree(eeprom_buff);
++ 	return 0;
++ }
++ 
++ static void ax88179_get_drvinfo(struct net_device *net,
++ 				struct ethtool_drvinfo *info)
++ {
++ 	/* Inherit standard device info */
++ 	usbnet_get_drvinfo(net, info);
++ 	info->eedump_len = 0x3e;
++ }
++ 
++ static int ax88179_get_settings(struct net_device *net, struct ethtool_cmd *cmd)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	return mii_ethtool_gset(&dev->mii, cmd);
++ }
++ 
++ static int ax88179_set_settings(struct net_device *net, struct ethtool_cmd *cmd)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	return mii_ethtool_sset(&dev->mii, cmd);
++ }
++ 
++ static int ax88179_ioctl(struct net_device *net, struct ifreq *rq, int cmd)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	return  generic_mii_ioctl(&dev->mii, if_mii(rq), cmd, NULL);
++ }
++ 
++ #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 28)
++ static int ax88179_netdev_stop(struct net_device *net)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	u16 tmp16 = 0;
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			 2, 2, &tmp16, 1);
++ 	tmp16 &= ~AX_MEDIUM_RECEIVE_EN;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			  2, 2, &tmp16);
++ 	return 0;
++ }
++ #endif
++ 
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0)
++ static int ax88179_set_csums(struct usbnet *dev)
++ {
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *)dev->data;
++ 	u8 checksum = 0;
++ 
++ 	if (ax179_data->checksum & AX_RX_CHECKSUM)
++ 		checksum = AX_RXCOE_DEF_CSUM;
++ 	else
++ 		checksum = 0;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RXCOE_CTL, 1, 1, &checksum);
++ 
++ 	if (ax179_data->checksum & AX_TX_CHECKSUM)
++ 		checksum = AX_TXCOE_DEF_CSUM;
++ 	else
++ 		checksum = 0;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL, 1, 1, &checksum);
++ 
++ 	return 0;
++ }
++ 
++ static u32 ax88179_get_tx_csum(struct net_device *netdev)
++ {
++ 	struct usbnet *dev = netdev_priv(netdev);
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *)dev->data;
++ 	return ax179_data->checksum & AX_TX_CHECKSUM;
++ }
++ 
++ static u32 ax88179_get_rx_csum(struct net_device *netdev)
++ {
++ 	struct usbnet *dev = netdev_priv(netdev);
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *)dev->data;
++ 	return ax179_data->checksum & AX_RX_CHECKSUM;
++ }
++ 
++ static int ax88179_set_rx_csum(struct net_device *netdev, u32 val)
++ {
++ 	struct usbnet *dev = netdev_priv(netdev);
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *)dev->data;
++ 
++ 	if (val)
++ 		ax179_data->checksum |= AX_RX_CHECKSUM;
++ 	else
++ 		ax179_data->checksum &= ~AX_RX_CHECKSUM;
++ 	return ax88179_set_csums(dev);
++ }
++ 
++ static int ax88179_set_tx_csum(struct net_device *netdev, u32 val)
++ {
++ 	struct usbnet *dev = netdev_priv(netdev);
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *)dev->data;
++ 
++ 	if (val)
++ 		ax179_data->checksum |= AX_TX_CHECKSUM;
++ 	else
++ 		ax179_data->checksum &= ~AX_TX_CHECKSUM;
++ 
++ 	ethtool_op_set_tx_csum(netdev, val);
++ 
++ 	return ax88179_set_csums(dev);
++ }
++ 
++ static int ax88179_set_tso(struct net_device *netdev, u32 data)
++ {
++ 	if (data)
++ 		netdev->features |= NETIF_F_TSO;
++ 	else
++ 		netdev->features &= ~NETIF_F_TSO;
++ 
++ 	return 0;
++ }
++ #endif
++ 
++ static struct ethtool_ops ax88179_ethtool_ops = {
++ 	.get_drvinfo		= ax88179_get_drvinfo,
++ 	.get_link		= ethtool_op_get_link,
++ 	.get_msglevel		= usbnet_get_msglevel,
++ 	.set_msglevel		= usbnet_set_msglevel,
++ 	.get_wol		= ax88179_get_wol,
++ 	.set_wol		= ax88179_set_wol,
++ 	.get_eeprom_len		= ax88179_get_eeprom_len,
++ 	.get_eeprom		= ax88179_get_eeprom,
++ 	.get_settings		= ax88179_get_settings,
++ 	.set_settings		= ax88179_set_settings,
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0)
++ 	.set_tx_csum		= ax88179_set_tx_csum,
++ 	.get_tx_csum		= ax88179_get_tx_csum,
++ 	.get_rx_csum		= ax88179_get_rx_csum,
++ 	.set_rx_csum		= ax88179_set_rx_csum,
++ 	.get_tso		= ethtool_op_get_tso,
++ 	.set_tso		= ax88179_set_tso,
++ 	.get_sg			= ethtool_op_get_sg,
++ 	.set_sg			= ethtool_op_set_sg
++ #endif
++ };
++ 
++ static void ax88179_set_multicast(struct net_device *net)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	struct ax88179_data *data = (struct ax88179_data *)&dev->data;
++ 	u8 *m_filter = ((u8 *)dev->data) + 12;
++ 	int mc_count = 0;
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35)
++ 	mc_count = net->mc_count;
++ #else
++ 	mc_count = netdev_mc_count(net);
++ #endif
++ 
++ 	data->rxctl = (AX_RX_CTL_START | AX_RX_CTL_AB);
++ 	if (NET_IP_ALIGN == 0)
++ 		data->rxctl |= AX_RX_CTL_IPE;
++ 
++ 	if (net->flags & IFF_PROMISC) {
++ 		data->rxctl |= AX_RX_CTL_PRO;
++ 	} else if (net->flags & IFF_ALLMULTI
++ 		   || mc_count > AX_MAX_MCAST) {
++ 		data->rxctl |= AX_RX_CTL_AMALL;
++ 	} else if (mc_count == 0) {
++ 		/* just broadcast and directed */
++ 	} else {
++ 		/* We use the 20 byte dev->data
++ 		 * for our 8 byte filter buffer
++ 		 * to avoid allocating memory that
++ 		 * is tricky to free later */
++ 		u32 crc_bits = 0;
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35)
++ 		struct dev_mc_list *mc_list = net->mc_list;
++ 		int i = 0;
++ 
++ 		memset(m_filter, 0, AX_MCAST_FILTER_SIZE);
++ 
++ 		/* Build the multicast hash filter. */
++ 		for (i = 0; i < net->mc_count; i++) {
++ 			crc_bits =
++ 			    ether_crc(ETH_ALEN,
++ 				      mc_list->dmi_addr) >> 26;
++ 			*(m_filter + (crc_bits >> 3)) |=
++ 				1 << (crc_bits & 7);
++ 			mc_list = mc_list->next;
++ 		}
++ #else
++ 		struct netdev_hw_addr *ha = NULL;
++ 		memset(m_filter, 0, AX_MCAST_FILTER_SIZE);
++ 		netdev_for_each_mc_addr(ha, net) {
++ 			crc_bits = ether_crc(ETH_ALEN, ha->addr) >> 26;
++ 			*(m_filter + (crc_bits >> 3)) |=
++ 				1 << (crc_bits & 7);
++ 		}
++ #endif
++ 		ax88179_write_cmd_async(dev, AX_ACCESS_MAC,
++ 					AX_MULTI_FILTER_ARRY,
++ 					AX_MCAST_FILTER_SIZE,
++ 					AX_MCAST_FILTER_SIZE, m_filter);
++ 
++ 		data->rxctl |= AX_RX_CTL_AM;
++ 	}
++ 
++ 	ax88179_write_cmd_async(dev, AX_ACCESS_MAC, AX_RX_CTL,
++ 				2, 2, &data->rxctl);
++ }
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
++ static int
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0)
++ ax88179_set_features(struct net_device *net, netdev_features_t features)
++ #else
++ ax88179_set_features(struct net_device *net, u32 features)
++ #endif
++ 
++ {
++ 	u8 tmp = 0;
++ 	struct usbnet *dev = netdev_priv(net);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0)
++ 	netdev_features_t changed = net->features ^ features;
++ #else
++ 	u32 changed = net->features ^ features;
++ #endif
++ 
++ 	if (changed & NETIF_F_IP_CSUM) {
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL,
++ 				 1, 1, &tmp, 0);
++ 		tmp ^= AX_TXCOE_TCP | AX_TXCOE_UDP;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL, 1, 1, &tmp);
++ 	}
++ 
++ 	if (changed & NETIF_F_IPV6_CSUM) {
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL,
++ 				 1, 1, &tmp, 0);
++ 		tmp ^= AX_TXCOE_TCPV6 | AX_TXCOE_UDPV6;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL, 1, 1, &tmp);
++ 	}
++ 
++ 	if (changed & NETIF_F_RXCSUM) {
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_RXCOE_CTL,
++ 				 1, 1, &tmp, 0);
++ 		tmp ^= AX_RXCOE_IP | AX_RXCOE_TCP | AX_RXCOE_UDP |
++ 		       AX_RXCOE_TCPV6 | AX_RXCOE_UDPV6;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RXCOE_CTL, 1, 1, &tmp);
++ 	}
++ 
++ 	return 0;
++ }
++ #endif
++ 
++ static int ax88179_change_mtu(struct net_device *net, int new_mtu)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	u16 tmp16 = 0;
++ 
++ 	if (new_mtu <= 0 || new_mtu > 4088)
++ 		return -EINVAL;
++ 
++ 	net->mtu = new_mtu;
++ 	dev->hard_mtu = net->mtu + net->hard_header_len;
++ 
++ 	if (net->mtu > 1500) {
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 				 2, 2, &tmp16, 1);
++ 		tmp16 |= AX_MEDIUM_JUMBO_EN;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 				  2, 2, &tmp16);
++ 	} else {
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 				 2, 2, &tmp16, 1);
++ 		tmp16 &= ~AX_MEDIUM_JUMBO_EN;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 				  2, 2, &tmp16);
++ 	}
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_set_mac_addr(struct net_device *net, void *p)
++ {
++ 	struct usbnet *dev = netdev_priv(net);
++ 	struct sockaddr *addr = p;
++ 
++ 	if (netif_running(net))
++ 		return -EBUSY;
++ 	if (!is_valid_ether_addr(addr->sa_data))
++ 		return -EADDRNOTAVAIL;
++ 
++ 	memcpy(net->dev_addr, addr->sa_data, ETH_ALEN);
++ 
++ 	/* Set the MAC address */
++ 	return ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_NODE_ID, ETH_ALEN,
++ 				 ETH_ALEN, net->dev_addr);
++ 
++ }
++ 
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 29)
++ static const struct net_device_ops ax88179_netdev_ops = {
++ 	.ndo_open		= usbnet_open,
++ 	.ndo_stop		= usbnet_stop,
++ 	.ndo_start_xmit		= usbnet_start_xmit,
++ 	.ndo_tx_timeout		= usbnet_tx_timeout,
++ 	.ndo_change_mtu		= ax88179_change_mtu,
++ 	.ndo_do_ioctl		= ax88179_ioctl,
++ 	.ndo_set_mac_address	= ax88179_set_mac_addr,
++ 	.ndo_validate_addr	= eth_validate_addr,
++ #if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 2, 0)
++ 	.ndo_set_multicast_list	= ax88179_set_multicast,
++ #else
++ 	.ndo_set_rx_mode	= ax88179_set_multicast,
++ #endif
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
++ 	.ndo_set_features	= ax88179_set_features,
++ #endif
++ };
++ #endif
++ 
++ static int ax88179_check_eeprom(struct usbnet *dev)
++ {
++ 	u8 i = 0;
++ 	u8 buf[2] = {0};
++ 	u8 eeprom[20] = {0};
++ 	u16 csum = 0, delay = HZ / 10;
++ 	unsigned long jtimeout = 0;
++ 
++ 	/* Read EEPROM content */
++ 	for (i = 0 ; i < 6; i++) {
++ 
++ 		buf[0] = i;
++ 		if (ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_SROM_ADDR,
++ 				      1, 1, buf) < 0)
++ 			return -EINVAL;
++ 
++ 		buf[0] = EEP_RD;
++ 		if (ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_SROM_CMD,
++ 				      1, 1, buf) < 0)
++ 			return -EINVAL;
++ 
++ 		jtimeout = jiffies + delay;
++ 		do {
++ 			ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_SROM_CMD,
++ 					 1, 1, buf, 0);
++ 
++ 			if (time_after(jiffies, jtimeout))
++ 				return -EINVAL;
++ 		} while (buf[0] & EEP_BUSY);
++ 
++ 
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_SROM_DATA_LOW,
++ 				 2, 2, &eeprom[i * 2], 0);
++ 
++ 		if ((i == 0) && (eeprom[0] == 0xFF))
++ 			return -EINVAL;
++ 	}
++ 
++ 	csum = eeprom[6] + eeprom[7] + eeprom[8] + eeprom[9];
++ 	csum = (csum >> 8) + (csum & 0xff);
++ 
++ 	if ((csum + eeprom[10]) == 0xff)
++ 		return AX_EEP_EFUSE_CORRECT;
++ 	else
++ 		return -EINVAL;
++ }
++ 
++ static int ax88179_check_efuse(struct usbnet *dev, void *ledmode)
++ {
++ 	u8	i = 0;
++ 	u8	efuse[64] = {0x00};
++ 	u16	csum = 0;
++ 
++ 	if (ax88179_read_cmd(dev, AX_ACCESS_EFUSE, 0, 64, 64, efuse, 0) < 0)
++ 		return -EINVAL;
++ 
++ 	if (efuse[0] == 0xFF)
++ 		return -EINVAL;
++ 
++ 	for (i = 0; i < 64; i++)
++ 		csum = csum + efuse[i];
++ 
++ 	while (csum > 255)
++ 		csum = (csum & 0x00FF) + ((csum >> 8) & 0x00FF);
++ 
++ 	if (csum == 0xFF) {
++ 		memcpy((u8 *)ledmode, &efuse[51], 2);
++ 		return AX_EEP_EFUSE_CORRECT;
++ 	} else {
++ 		return -EINVAL;
++ 	}
++ }
++ 
++ static int ax88179_convert_old_led(struct usbnet *dev, u8 efuse, void *ledvalue)
++ {
++ 	u8 ledmode = 0;
++ 	u16 tmp = 0;
++ 	u16 led = 0;
++ 
++ 	/* loaded the old eFuse LED Mode */
++ 	if (efuse) {
++ 		if (ax88179_read_cmd(dev, AX_ACCESS_EFUSE, 0x18,
++ 				     1, 2, &tmp, 1) < 0)
++ 			return -EINVAL;
++ 		ledmode = (u8)(tmp & 0xFF);
++ 	} else { /* loaded the old EEprom LED Mode */
++ 		if (ax88179_read_cmd(dev, AX_ACCESS_EEPROM, 0x3C,
++ 				     1, 2, &tmp, 1) < 0)
++ 			return -EINVAL;
++ 		ledmode = (u8) (tmp >> 8);
++ 	}
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 	netdev_dbg(dev->net, "Old LED Mode = %02X\n", ledmode);
++ #else
++ 	devdbg(dev, "Old LED Mode = %02X\n", ledmode);
++ #endif
++ 	switch (ledmode) {
++ 	case 0xFF:
++ 		led = LED0_ACTIVE | LED1_LINK_10 | LED1_LINK_100 |
++ 		      LED1_LINK_1000 | LED2_ACTIVE | LED2_LINK_10 |
++ 		      LED2_LINK_100 | LED2_LINK_1000 | LED_VALID;
++ 		break;
++ 	case 0xFE:
++ 		led = LED0_ACTIVE | LED1_LINK_1000 | LED2_LINK_100 | LED_VALID;
++ 		break;
++ 	case 0xFD:
++ 		led = LED0_ACTIVE | LED1_LINK_1000 | LED2_LINK_100 |
++ 		      LED2_LINK_10 | LED_VALID;
++ 		break;
++ 	case 0xFC:
++ 		led = LED0_ACTIVE | LED1_ACTIVE | LED1_LINK_1000 | LED2_ACTIVE |
++ 		      LED2_LINK_100 | LED2_LINK_10 | LED_VALID;
++ 		break;
++ 	default:
++ 		led = LED0_ACTIVE | LED1_LINK_10 | LED1_LINK_100 |
++ 		      LED1_LINK_1000 | LED2_ACTIVE | LED2_LINK_10 |
++ 		      LED2_LINK_100 | LED2_LINK_1000 | LED_VALID;
++ 		break;
++ 	}
++ 
++ 	memcpy((u8 *)ledvalue, &led, 2);
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_led_setting(struct usbnet *dev)
++ {
++ 	u8 ledfd = 0, value = 0;
++ 	u16 tmp = 0, ledact = 0, ledlink = 0, ledvalue = 0, delay = HZ / 10;
++ 	unsigned long jtimeout = 0;
++ 
++ 	/* Check AX88179 version. UA1 or UA2 */
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, GENERAL_STATUS, 1, 1, &value, 0);
++ 
++ 	/* UA1 */
++ 	if (!(value & AX_SECLD)) {
++ 		value = AX_GPIO_CTRL_GPIO3EN | AX_GPIO_CTRL_GPIO2EN |
++ 			AX_GPIO_CTRL_GPIO1EN;
++ 		if (ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_GPIO_CTRL,
++ 				      1, 1, &value) < 0)
++ 			return -EINVAL;
++ 	}
++ 
++ 	/* check EEprom */
++ 	if (ax88179_check_eeprom(dev) == AX_EEP_EFUSE_CORRECT) {
++ 		value = 0x42;
++ 		if (ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_SROM_ADDR,
++ 				      1, 1, &value) < 0)
++ 			return -EINVAL;
++ 
++ 		value = EEP_RD;
++ 		if (ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_SROM_CMD,
++ 				      1, 1, &value) < 0)
++ 			return -EINVAL;
++ 
++ 		jtimeout = jiffies + delay;
++ 		do {
++ 			ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_SROM_CMD,
++ 					 1, 1, &value, 0);
++ 
++ 			ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_SROM_CMD,
++ 					 1, 1, &value, 0);
++ 
++ 			if (time_after(jiffies, jtimeout))
++ 				return -EINVAL;
++ 		} while (value & EEP_BUSY);
++ 
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_SROM_DATA_HIGH,
++ 				 1, 1, &value, 0);
++ 		ledvalue = (value << 8);
++ 		ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_SROM_DATA_LOW,
++ 				 1, 1, &value, 0);
++ 		ledvalue |= value;
++ 
++ 		/* load internal ROM for defaule setting */
++ 		if ((ledvalue == 0xFFFF) || ((ledvalue & LED_VALID) == 0))
++ 			ax88179_convert_old_led(dev, 0, &ledvalue);
++ 
++ 	} else if (ax88179_check_efuse(dev, &ledvalue) ==
++ 				       AX_EEP_EFUSE_CORRECT) { /* check efuse */
++ 		if ((ledvalue == 0xFFFF) || ((ledvalue & LED_VALID) == 0))
++ 			ax88179_convert_old_led(dev, 0, &ledvalue);
++ 	} else {
++ 		ax88179_convert_old_led(dev, 0, &ledvalue);
++ 	}
++ 
++ 	tmp = GMII_PHY_PAGE_SELECT_EXT;
++ 	ax88179_write_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			  GMII_PHY_PAGE_SELECT, 2, &tmp);
++ 
++ 	tmp = 0x2c;
++ 	ax88179_write_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			  GMII_PHYPAGE, 2, &tmp);
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			 GMII_LED_ACTIVE, 2, &ledact, 1);
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			 GMII_LED_LINK, 2, &ledlink, 1);
++ 
++ 	ledact &= GMII_LED_ACTIVE_MASK;
++ 	ledlink &= GMII_LED_LINK_MASK;
++ 
++ 	if (ledvalue & LED0_ACTIVE)
++ 		ledact |= GMII_LED0_ACTIVE;
++ 	if (ledvalue & LED1_ACTIVE)
++ 		ledact |= GMII_LED1_ACTIVE;
++ 	if (ledvalue & LED2_ACTIVE)
++ 		ledact |= GMII_LED2_ACTIVE;
++ 
++ 	if (ledvalue & LED0_LINK_10)
++ 		ledlink |= GMII_LED0_LINK_10;
++ 	if (ledvalue & LED1_LINK_10)
++ 		ledlink |= GMII_LED1_LINK_10;
++ 	if (ledvalue & LED2_LINK_10)
++ 		ledlink |= GMII_LED2_LINK_10;
++ 
++ 	if (ledvalue & LED0_LINK_100)
++ 		ledlink |= GMII_LED0_LINK_100;
++ 	if (ledvalue & LED1_LINK_100)
++ 		ledlink |= GMII_LED1_LINK_100;
++ 	if (ledvalue & LED2_LINK_100)
++ 		ledlink |= GMII_LED2_LINK_100;
++ 
++ 	if (ledvalue & LED0_LINK_1000)
++ 		ledlink |= GMII_LED0_LINK_1000;
++ 	if (ledvalue & LED1_LINK_1000)
++ 		ledlink |= GMII_LED1_LINK_1000;
++ 	if (ledvalue & LED2_LINK_1000)
++ 		ledlink |= GMII_LED2_LINK_1000;
++ 
++ 	tmp = ledact;
++ 	ax88179_write_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			  GMII_LED_ACTIVE, 2, &tmp);
++ 
++ 	tmp = ledlink;
++ 	ax88179_write_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			  GMII_LED_LINK, 2, &tmp);
++ 
++ 	tmp = GMII_PHY_PAGE_SELECT_PAGE0;
++ 	ax88179_write_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			  GMII_PHY_PAGE_SELECT, 2, &tmp);
++ 
++ 	/* LED full duplex setting */
++ 	ledfd = 0;
++ 	if (ledvalue & LED0_FD)
++ 		ledfd |= 0x01;
++ 	else if ((ledvalue & LED0_USB3_MASK) == 0)
++ 		ledfd |= 0x02;
++ 
++ 
++ 	if (ledvalue & LED1_FD)
++ 		ledfd |= 0x04;
++ 	else if ((ledvalue & LED1_USB3_MASK) == 0)
++ 		ledfd |= 0x08;
++ 
++ 	if (ledvalue & LED2_FD) /* LED2_FD */
++ 		ledfd |= 0x10;
++ 	else if ((ledvalue & LED2_USB3_MASK) == 0) /* LED2_USB3 */
++ 		ledfd |= 0x20;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, 0x73, 1, 1, &ledfd);
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_AutoDetach(struct usbnet *dev, int in_pm)
++ {
++ 	u16 tmp16 = 0;
++ 	u8 tmp8 = 0;
++ 	int (*fnr)(struct usbnet *, u8, u16, u16, u16, void *, int);
++ 	int (*fnw)(struct usbnet *, u8, u16, u16, u16, void *);
++ 
++ 	if (!in_pm) {
++ 		fnr = ax88179_read_cmd;
++ 		fnw = ax88179_write_cmd;
++ 	} else {
++ 		fnr = ax88179_read_cmd_nopm;
++ 		fnw = ax88179_write_cmd_nopm;
++ 	}
++ 
++ 	if (fnr(dev, AX_ACCESS_EEPROM, 0x43, 1, 2, &tmp16, 1) < 0)
++ 		return 0;
++ 
++ 	if ((tmp16 == 0xFFFF) || (!(tmp16 & 0x0100)))
++ 		return 0;
++ 
++ 	/* Enable Auto Detach bit */
++ 	tmp8 = 0;
++ 	fnr(dev, AX_ACCESS_MAC, AX_CLK_SELECT, 1, 1, &tmp8, 0);
++ 	tmp8 |= AX_CLK_SELECT_ULR;
++ 	fnw(dev, AX_ACCESS_MAC, AX_CLK_SELECT, 1, 1, &tmp8);
++ 
++ 	fnr(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL, 2, 2, &tmp16, 1);
++ 	tmp16 |= AX_PHYPWR_RSTCTL_AUTODETACH;
++ 	fnw(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL, 2, 2, &tmp16);
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_bind(struct usbnet *dev, struct usb_interface *intf)
++ {
++ 	void *buf = NULL;
++ 	u16 *tmp16 = NULL;
++ 	u8 *tmp = NULL;
++ 
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *)dev->data;
++ 
++ 	usbnet_get_endpoints(dev, intf);
++ 
++ 	if (msg_enable != 0)
++ 		dev->msg_enable = msg_enable;
++ 
++ 	buf = kmalloc(6, GFP_KERNEL);
++ 	if (!buf) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_err(dev->net, "Cannot allocate memory for buffer");
++ #else
++ 		deverr(dev, "Cannot allocate memory for buffer");
++ #endif
++ 		return -ENOMEM;
++ 	}
++ 	tmp16 = (u16 *)buf;
++ 	tmp = (u8 *)buf;
++ 
++ 	memset(ax179_data, 0, sizeof(*ax179_data));
++ 
++ 	/* Power up ethernet PHY */
++ 	*tmp16 = 0;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL, 2, 2, tmp16);
++ 	*tmp16 = AX_PHYPWR_RSTCTL_IPRL;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL, 2, 2, tmp16);
++ 	msleep(200);
++ 
++ 	*tmp = AX_CLK_SELECT_ACS | AX_CLK_SELECT_BCS;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_CLK_SELECT, 1, 1, tmp);
++ 	msleep(100);
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_NODE_ID, ETH_ALEN,
++ 			  ETH_ALEN, dev->net->dev_addr, 0);
++ 	memcpy(dev->net->perm_addr, dev->net->dev_addr, ETH_ALEN);
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_dbg(dev->net, "MAC [%02x-%02x-%02x-%02x-%02x-%02x]\n",
++ 			   dev->net->dev_addr[0], dev->net->dev_addr[1],
++ 			   dev->net->dev_addr[2], dev->net->dev_addr[3],
++ 			   dev->net->dev_addr[4], dev->net->dev_addr[5]);
++ #else
++ 		devdbg(dev, "MAC [%02x-%02x-%02x-%02x-%02x-%02x]\n",
++ 		       dev->net->dev_addr[0], dev->net->dev_addr[1],
++ 		       dev->net->dev_addr[2], dev->net->dev_addr[3],
++ 		       dev->net->dev_addr[4], dev->net->dev_addr[5]);
++ #endif
++ 
++ 	/* RX bulk configuration, default for USB3.0 to Giga*/
++ 	memcpy(tmp, &AX88179_BULKIN_SIZE[0], 5);
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_BULKIN_QCTRL, 5, 5, tmp);
++ 
++ 	dev->rx_urb_size = 1024 * 20;
++ 
++ 	tmp[0] = 0x34;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PAUSE_WATERLVL_LOW, 1, 1, tmp);
++ 
++ 	tmp[0] = 0x52;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PAUSE_WATERLVL_HIGH,
++ 			  1, 1, tmp);
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 30)
++ 	dev->net->do_ioctl = ax88179_ioctl;
++ 	dev->net->set_multicast_list = ax88179_set_multicast;
++ 	dev->net->set_mac_address = ax88179_set_mac_addr;
++ 	dev->net->change_mtu = ax88179_change_mtu;
++ #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 28)
++ 	dev->net->stop = ax88179_netdev_stop;
++ #endif
++ #else
++ 	dev->net->netdev_ops = &ax88179_netdev_ops;
++ #endif
++ 
++ 	dev->net->ethtool_ops = &ax88179_ethtool_ops;
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
++ 	dev->net->needed_headroom = 8;
++ #endif
++ 
++ 	/* Initialize MII structure */
++ 	dev->mii.dev = dev->net;
++ 	dev->mii.mdio_read = ax88179_mdio_read;
++ 	dev->mii.mdio_write = ax88179_mdio_write;
++ 	dev->mii.phy_id_mask = 0xff;
++ 	dev->mii.reg_num_mask = 0xff;
++ 	dev->mii.phy_id = 0x03;
++ 	dev->mii.supports_gmii = 1;
++ 
++ 	dev->net->features |= NETIF_F_IP_CSUM;
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22)
++ 	dev->net->features |= NETIF_F_IPV6_CSUM;
++ #endif
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)
++ 	if (usb_device_no_sg_constraint(dev->udev))
++ 		dev->can_dma_sg = 1;
++ 	dev->net->features |= NETIF_F_SG | NETIF_F_TSO;
++ #endif
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
++ 	dev->net->hw_features |= NETIF_F_IP_CSUM;
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22)
++ 	dev->net->hw_features |= NETIF_F_IPV6_CSUM;
++ #endif
++ 	dev->net->hw_features |= NETIF_F_SG | NETIF_F_TSO;
++ #endif
++ 
++ 	/* Enable checksum offload */
++ 	*tmp = AX_RXCOE_IP | AX_RXCOE_TCP | AX_RXCOE_UDP |
++ 	       AX_RXCOE_TCPV6 | AX_RXCOE_UDPV6;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RXCOE_CTL, 1, 1, tmp);
++ 
++ 	*tmp = AX_TXCOE_IP | AX_TXCOE_TCP | AX_TXCOE_UDP |
++ 	       AX_TXCOE_TCPV6 | AX_TXCOE_UDPV6;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL, 1, 1, tmp);
++ 
++ 	ax179_data->checksum |= AX_RX_CHECKSUM | AX_TX_CHECKSUM;
++ 
++ 	/* Configure RX control register => start operation */
++ 	*tmp16 = AX_RX_CTL_DROPCRCERR | AX_RX_CTL_START | AX_RX_CTL_AP |
++ 		 AX_RX_CTL_AMALL | AX_RX_CTL_AB;
++ 	if (NET_IP_ALIGN == 0)
++ 		*tmp16 |= AX_RX_CTL_IPE;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_CTL, 2, 2, tmp16);
++ 
++ 	*tmp = AX_MONITOR_MODE_PMETYPE | AX_MONITOR_MODE_PMEPOL |
++ 						AX_MONITOR_MODE_RWMP;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MONITOR_MODE, 1, 1, tmp);
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MONITOR_MODE, 1, 1, tmp, 0);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_dbg(dev->net, "Monitor mode = 0x%02x\n", *tmp);
++ #else
++ 		devdbg(dev, "Monitor mode = 0x%02x\n", *tmp);
++ #endif
++ 	/* Configure default medium type => giga */
++ 	*tmp16 = AX_MEDIUM_RECEIVE_EN	 | AX_MEDIUM_TXFLOW_CTRLEN |
++ 		 AX_MEDIUM_RXFLOW_CTRLEN | AX_MEDIUM_FULL_DUPLEX   |
++ 		 AX_MEDIUM_GIGAMODE;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			  2, 2, tmp16);
++ 
++ 	ax88179_led_setting(dev);
++ 
++ 	/* Restart autoneg */
++ 	mii_nway_restart(&dev->mii);
++ 
++ 	netif_carrier_off(dev->net);
++ 
++ 	kfree(buf);
++ 	printk(version);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_info(dev->net, "mtu %d\n", dev->net->mtu);
++ #else
++ 		devinfo(dev, "mtu %d\n", dev->net->mtu);
++ #endif
++ 	return 0;
++ 
++ }
++ 
++ static void ax88179_unbind(struct usbnet *dev, struct usb_interface *intf)
++ {
++ 	u16 tmp16 = 0;
++ 	u8 tmp8 = 0;
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *) dev->data;
++ 
++ 	if (ax179_data) {
++ 		/* Configure RX control register => stop operation */
++ 		tmp16 = AX_RX_CTL_STOP;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_CTL, 2, 2, &tmp16);
++ 
++ 		tmp8 = 0x0;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_CLK_SELECT,
++ 				  1, 1, &tmp8);
++ 
++ 		/* Power down ethernet PHY */
++ 		tmp16 = AX_PHYPWR_RSTCTL_BZ | AX_PHYPWR_RSTCTL_IPRL;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL,
++ 				  2, 2, &tmp16);
++ 		msleep(200);
++ 	}
++ }
++ 
++ static void
++ ax88179_rx_checksum(struct sk_buff *skb, u32 *pkt_hdr)
++ {
++ 	skb->ip_summed = CHECKSUM_NONE;
++ 
++ 	/* checksum error bit is set */
++ 	if ((*pkt_hdr & AX_RXHDR_L3CSUM_ERR) ||
++ 	    (*pkt_hdr & AX_RXHDR_L4CSUM_ERR))
++ 		return;
++ 
++ 	/* It must be a TCP or UDP packet with a valid checksum */
++ 	if (((*pkt_hdr & AX_RXHDR_L4_TYPE_MASK) == AX_RXHDR_L4_TYPE_TCP) ||
++ 	    ((*pkt_hdr & AX_RXHDR_L4_TYPE_MASK) == AX_RXHDR_L4_TYPE_UDP))
++ 		skb->ip_summed = CHECKSUM_UNNECESSARY;
++ }
++ 
++ static int ax88179_rx_fixup(struct usbnet *dev, struct sk_buff *skb)
++ {
++ 	struct sk_buff *ax_skb = NULL;
++ 	int pkt_cnt = 0;
++ 	u32 rx_hdr = 0;
++ 	u16 hdr_off = 0;
++ 	u32 *pkt_hdr = NULL;
++ 
++ 	skb_trim(skb, skb->len - 4);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22)
++ 	memcpy(&rx_hdr, skb_tail_pointer(skb), sizeof(rx_hdr));
++ #else
++ 	memcpy(&rx_hdr, skb->tail, sizeof(rx_hdr));
++ #endif
++ 	le32_to_cpus(&rx_hdr);
++ 
++ 	pkt_cnt = (u16)rx_hdr;
++ 	hdr_off = (u16)(rx_hdr >> 16);
++ 	pkt_hdr = (u32 *)(skb->data + hdr_off);
++ 
++ 	while (pkt_cnt--) {
++ 		u16 pkt_len;
++ 
++ 		le32_to_cpus(pkt_hdr);
++ 		pkt_len = (*pkt_hdr >> 16) & 0x1fff;
++ 
++ 		/* Check CRC or runt packet */
++ 		if ((*pkt_hdr & AX_RXHDR_CRC_ERR) ||
++ 		    (*pkt_hdr & AX_RXHDR_DROP_ERR)) {
++ 			skb_pull(skb, (pkt_len + 7) & 0xFFF8);
++ 			pkt_hdr++;
++ 			continue;
++ 		}
++ 
++ 		if (pkt_cnt == 0) {			
++ 			skb->len = pkt_len;
++ 
++ 			/* Skip IP alignment psudo header */
++ 			if (NET_IP_ALIGN == 0)
++ 				skb_pull(skb, 2);
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22)
++ 			skb->tail = skb->data + skb->len;
++ #else
++ 			skb_set_tail_pointer(skb, skb->len);
++ #endif
++ 			skb->truesize = skb->len + sizeof(struct sk_buff);
++ 			ax88179_rx_checksum(skb, pkt_hdr);
++ 
++ 			return 1;
++ 		}
++ 
++ 		ax_skb = skb_clone(skb, GFP_ATOMIC);
++ 		if (ax_skb) {
++ 			ax_skb->len = pkt_len;
++ 	
++ 			/* Skip IP alignment psudo header */
++ 			if (NET_IP_ALIGN == 0)
++ 				skb_pull(ax_skb, 2);
++ 
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22)
++ 			ax_skb->tail = ax_skb->data + ax_skb->len;
++ #else
++ 			skb_set_tail_pointer(ax_skb, ax_skb->len);
++ #endif
++ 			ax_skb->truesize = ax_skb->len + sizeof(struct sk_buff);
++ 			ax88179_rx_checksum(ax_skb, pkt_hdr);
++ 			usbnet_skb_return(dev, ax_skb);
++ 		} else {
++ 			return 0;
++ 		}
++ 
++ 		skb_pull(skb, (pkt_len + 7) & 0xFFF8);
++ 		pkt_hdr++;
++ 	}
++ 	return 1;
++ }
++ 
++ static struct sk_buff *
++ ax88179_tx_fixup(struct usbnet *dev, struct sk_buff *skb, gfp_t flags)
++ {
++ 	u32 tx_hdr1 = 0, tx_hdr2 = 0;
++ 	int frame_size = dev->maxpacket;
++ 	int mss = skb_shinfo(skb)->gso_size;
++ 	int headroom = 0;
++ 	int tailroom = 0;
++ 
++ 	tx_hdr1 = skb->len;
++ 	tx_hdr2 = mss;
++ 	if (((skb->len + 8) % frame_size) == 0)
++ 		tx_hdr2 |= 0x80008000;	/* Enable padding */
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)
++ 	if (!dev->can_dma_sg && (dev->net->features & NETIF_F_SG) &&
++ 	    skb_linearize(skb))
++ 		return NULL;
++ #else
++ 	if ((dev->net->features & NETIF_F_SG) && skb_linearize(skb))
++ 		return NULL;
++ #endif
++ 
++ 	headroom = skb_headroom(skb);
++ 	tailroom = skb_tailroom(skb);
++ 
++ 	if ((headroom + tailroom) >= 8) {
++ 		if (headroom < 8) {
++ 			skb->data = memmove(skb->head + 8, skb->data, skb->len);
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22)
++ 			skb->tail = skb->data + skb->len;
++ #else
++ 			skb_set_tail_pointer(skb, skb->len);
++ #endif
++ 		}
++ 	} else {
++ 		struct sk_buff *skb2 = NULL;
++ 		skb2 = skb_copy_expand(skb, 8, 0, flags);
++ 		dev_kfree_skb_any(skb);
++ 		skb = skb2;
++ 		if (!skb)
++ 			return NULL;
++ 	}
++ 
++ 	skb_push(skb, 4);
++ 	cpu_to_le32s(&tx_hdr2);
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22)
++ 	memcpy(skb->data, &tx_hdr2, 4);
++ #else
++ 	skb_copy_to_linear_data(skb, &tx_hdr2, 4);
++ #endif
++ 
++ 	skb_push(skb, 4);
++ 	cpu_to_le32s(&tx_hdr1);
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22)
++ 	memcpy(skb->data, &tx_hdr1, 4);
++ #else
++ 	skb_copy_to_linear_data(skb, &tx_hdr1, 4);
++ #endif
++ 
++ 	return skb;
++ }
++ 
++ static int ax88179_link_reset(struct usbnet *dev)
++ {
++ 	struct ax88179_data *data = (struct ax88179_data *)&dev->data;
++ 	u8 tmp[5] = {0}, link_sts = 0;
++ 	u16 mode = 0, tmp16 = 0, delay = HZ/10;
++ 	u32 tmp32 = 0x40000000;
++ 	unsigned long jtimeout = 0;
++ 
++ 	jtimeout = jiffies + delay;
++ 
++ 	while (tmp32 & 0x40000000) {
++ 		mode = 0;
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_CTL, 2, 2, &mode);
++ 		ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_CTL,
++ 				  2, 2, &data->rxctl);
++ 
++ 		/* link up, check the usb device control TX FIFO full or empty*/
++ 		ax88179_read_cmd(dev, 0x81, 0x8c, 0, 4, &tmp32, 1);
++ 
++ 		if (time_after(jiffies, jtimeout))
++ 			return 0;
++ 	}
++ 
++ 	mode = AX_MEDIUM_RECEIVE_EN    | AX_MEDIUM_TXFLOW_CTRLEN |
++ 		   AX_MEDIUM_RXFLOW_CTRLEN;
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, PHYSICAL_LINK_STATUS,
++ 			 1, 1, &link_sts, 0);
++ 	ax88179_read_cmd(dev, AX_ACCESS_PHY, AX88179_PHY_ID,
++ 			 GMII_PHY_PHYSR, 2, &tmp16, 1);
++ 
++ 	if (!(tmp16 & GMII_PHY_PHYSR_LINK))
++ 		return 0;
++ 	else if (GMII_PHY_PHYSR_GIGA == (tmp16 & GMII_PHY_PHYSR_SMASK)) {
++ 		mode |= AX_MEDIUM_GIGAMODE | AX_MEDIUM_EN_125MHZ;
++ 		if (dev->net->mtu > 1500)
++ 			mode |= AX_MEDIUM_JUMBO_EN;
++ 
++ 		if (link_sts & AX_USB_SS)
++ 			memcpy(tmp, &AX88179_BULKIN_SIZE[0], 5);
++ 		else if (link_sts & AX_USB_HS)
++ 			memcpy(tmp, &AX88179_BULKIN_SIZE[1], 5);
++ 		else
++ 			memcpy(tmp, &AX88179_BULKIN_SIZE[3], 5);
++ 	} else if (GMII_PHY_PHYSR_100 == (tmp16 & GMII_PHY_PHYSR_SMASK)) {
++ 		mode |= AX_MEDIUM_PS;	/* Bit 9 : PS */
++ 		if (link_sts & (AX_USB_SS | AX_USB_HS))
++ 			memcpy(tmp, &AX88179_BULKIN_SIZE[2], 5);
++ 		else
++ 			memcpy(tmp, &AX88179_BULKIN_SIZE[3], 5);
++ 	} else
++ 		memcpy(tmp, &AX88179_BULKIN_SIZE[3], 5);
++ 
++ 	if (bsize != -1) {
++ 		if (bsize > 24)
++ 			bsize = 24;
++ 
++ 		else if (bsize == 0) {
++ 			tmp[1] = 0;
++ 			tmp[2] = 0;
++ 		}
++ 
++ 		tmp[3] = (u8)bsize;
++ 	}
++ 
++ 	if (ifg != -1) {
++ 		if (ifg > 255)
++ 			ifg = 255;
++ 		tmp[4] = (u8)ifg;
++ 	}
++ 
++ 	/* RX bulk configuration */
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_BULKIN_QCTRL, 5, 5, tmp);
++ 
++ 	if (tmp16 & GMII_PHY_PHYSR_FULL)
++ 		mode |= AX_MEDIUM_FULL_DUPLEX;	/* Bit 1 : FD */
++ 
++ 	dev->rx_urb_size = (1024 * (tmp[3] + 2));
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_info(dev->net, "Write medium type: 0x%04x\n", mode);
++ #else
++ 		devinfo(dev, "Write medium type: 0x%04x\n", mode);
++ #endif
++ 	/* Configure default medium type => giga */
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			  2, 2, &mode);
++ 	mii_check_media(&dev->mii, 1, 1);
++ 
++ 	return 0;
++ }
++ 
++ static int ax88179_reset(struct usbnet *dev)
++ {
++ 	void *buf = NULL;
++ 	u16 *tmp16 = NULL;
++ 	u8 *tmp = NULL;
++ 	struct ax88179_data *ax179_data = (struct ax88179_data *) dev->data;
++ 	buf = kmalloc(6, GFP_KERNEL);
++ 
++ 	if (!buf) {
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 		netdev_err(dev->net, "Cannot allocate memory for buffer");
++ #else
++ 		deverr(dev, "Cannot allocate memory for buffer");
++ #endif
++ 		return -ENOMEM;
++ 	}
++ 
++ 	tmp16 = (u16 *)buf;
++ 	tmp = (u8 *)buf;
++ 
++ 	/* Power up ethernet PHY */
++ 	*tmp16 = 0;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL, 2, 2, tmp16);
++ 	*tmp16 = AX_PHYPWR_RSTCTL_IPRL;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PHYPWR_RSTCTL, 2, 2, tmp16);
++ 	msleep(200);
++ 
++ 	*tmp = AX_CLK_SELECT_ACS | AX_CLK_SELECT_BCS;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_CLK_SELECT, 1, 1, tmp);
++ 	msleep(100);
++ 
++ 	/* Ethernet PHY Auto Detach*/
++ 	ax88179_AutoDetach(dev, 0);
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_NODE_ID, ETH_ALEN, ETH_ALEN,
++ 			 dev->net->dev_addr, 0);
++ 	memcpy(dev->net->perm_addr, dev->net->dev_addr, ETH_ALEN);
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 	netdev_dbg(dev->net, "MAC [%02x-%02x-%02x-%02x-%02x-%02x]\n",
++ 	dev->net->dev_addr[0], dev->net->dev_addr[1],
++ 	dev->net->dev_addr[2], dev->net->dev_addr[3],
++ 	dev->net->dev_addr[4], dev->net->dev_addr[5]);
++ #else
++ 	devdbg(dev, "MAC [%02x-%02x-%02x-%02x-%02x-%02x]\n",
++ 	dev->net->dev_addr[0], dev->net->dev_addr[1],
++ 	dev->net->dev_addr[2], dev->net->dev_addr[3],
++ 	dev->net->dev_addr[4], dev->net->dev_addr[5]);
++ #endif
++ 
++ 	/* RX bulk configuration */
++ 	memcpy(tmp, &AX88179_BULKIN_SIZE[0], 5);
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_BULKIN_QCTRL, 5, 5, tmp);
++ 
++ 	dev->rx_urb_size = 1024 * 20;
++ 
++ 	tmp[0] = 0x34;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PAUSE_WATERLVL_LOW, 1, 1, tmp);
++ 
++ 	tmp[0] = 0x52;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_PAUSE_WATERLVL_HIGH,
++ 			  1, 1, tmp);
++ 
++ 	dev->net->features |= NETIF_F_IP_CSUM;
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22)
++ 	dev->net->features |= NETIF_F_IPV6_CSUM;
++ #endif
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)
++ 	if (usb_device_no_sg_constraint(dev->udev))
++ 		dev->can_dma_sg = 1;
++ 	dev->net->features |= NETIF_F_SG | NETIF_F_TSO;
++ #endif
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
++ 	dev->net->hw_features |= NETIF_F_IP_CSUM;
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22)
++ 	dev->net->hw_features |= NETIF_F_IPV6_CSUM;
++ #endif
++ 	dev->net->hw_features |= NETIF_F_SG | NETIF_F_TSO;
++ #endif
++ 
++ 	/* Enable checksum offload */
++ 	*tmp = AX_RXCOE_IP | AX_RXCOE_TCP | AX_RXCOE_UDP |
++ 	       AX_RXCOE_TCPV6 | AX_RXCOE_UDPV6;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RXCOE_CTL, 1, 1, tmp);
++ 
++ 	*tmp = AX_TXCOE_IP | AX_TXCOE_TCP | AX_TXCOE_UDP |
++ 	       AX_TXCOE_TCPV6 | AX_TXCOE_UDPV6;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_TXCOE_CTL, 1, 1, tmp);
++ 
++ 	ax179_data->checksum |= AX_RX_CHECKSUM | AX_TX_CHECKSUM;
++ 
++ 	/* Configure RX control register => start operation */
++ 	*tmp16 = AX_RX_CTL_DROPCRCERR | AX_RX_CTL_START | AX_RX_CTL_AP |
++ 		 AX_RX_CTL_AMALL | AX_RX_CTL_AB;
++ 	if (NET_IP_ALIGN == 0)
++ 		*tmp16 |= AX_RX_CTL_IPE;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_RX_CTL, 2, 2, tmp16);
++ 
++ 	*tmp = AX_MONITOR_MODE_PMETYPE | AX_MONITOR_MODE_PMEPOL |
++ 						AX_MONITOR_MODE_RWMP;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MONITOR_MODE, 1, 1, tmp);
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MONITOR_MODE, 1, 1, tmp, 0);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 	netdev_dbg(dev->net, "Monitor mode = 0x%02x\n", *tmp);
++ #else
++ 	devdbg(dev, "Monitor mode = 0x%02x\n", *tmp);
++ #endif
++ 
++ 	/* Configure default medium type => giga */
++ 	*tmp16 = AX_MEDIUM_RECEIVE_EN	 | AX_MEDIUM_TXFLOW_CTRLEN |
++ 		 AX_MEDIUM_RXFLOW_CTRLEN | AX_MEDIUM_FULL_DUPLEX   |
++ 		 AX_MEDIUM_GIGAMODE;
++ 
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			  2, 2, tmp16);
++ 
++ 	ax88179_led_setting(dev);
++ 
++ 	/* Restart autoneg */
++ 	mii_nway_restart(&dev->mii);
++ 
++ 	netif_carrier_off(dev->net);
++ 
++ 	kfree(buf);
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34)
++ 	netdev_dbg(dev->net, "mtu %d\n", dev->net->mtu);
++ #else
++ 	devdbg(dev, "mtu %d\n", dev->net->mtu);
++ #endif
++ 
++ 	return 0;
++ 
++ }
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ static int ax88179_stop(struct usbnet *dev)
++ {
++ 	u16 tmp16 = 0;
++ 
++ 	ax88179_read_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			 2, 2, &tmp16, 1);
++ 	tmp16 &= ~AX_MEDIUM_RECEIVE_EN;
++ 	ax88179_write_cmd(dev, AX_ACCESS_MAC, AX_MEDIUM_STATUS_MODE,
++ 			  2, 2, &tmp16);
++ 	return 0;
++ }
++ #endif
++ 
++ static const struct driver_info ax88179_info = {
++ 	.description = "ASIX AX88179 USB 3.0 Gigabit Ethernet",
++ 	.bind	= ax88179_bind,
++ 	.unbind	= ax88179_unbind,
++ 	.status	= ax88179_status,
++ 	.link_reset = ax88179_link_reset,
++ 	.reset	= ax88179_reset,
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ 	.stop	= ax88179_stop,
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX | FLAG_AVOID_UNLINK_URBS,
++ #else
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX,
++ #endif
++ 	.rx_fixup = ax88179_rx_fixup,
++ 	.tx_fixup = ax88179_tx_fixup,
++ };
++ 
++ 
++ static const struct driver_info ax88178a_info = {
++ 	.description = "ASIX AX88178A USB 2.0 Gigabit Ethernet",
++ 	.bind	= ax88179_bind,
++ 	.unbind	= ax88179_unbind,
++ 	.status	= ax88179_status,
++ 	.link_reset = ax88179_link_reset,
++ 	.reset	= ax88179_reset,
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ 	.stop	= ax88179_stop,
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX | FLAG_AVOID_UNLINK_URBS,
++ #else
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX,
++ #endif
++ 	.rx_fixup = ax88179_rx_fixup,
++ 	.tx_fixup = ax88179_tx_fixup,
++ };
++ 
++ static const struct driver_info sitecom_info = {
++ 	.description = "Sitecom USB 3.0 to Gigabit Adapter",
++ 	.bind	= ax88179_bind,
++ 	.unbind	= ax88179_unbind,
++ 	.status	= ax88179_status,
++ 	.link_reset = ax88179_link_reset,
++ 	.reset	= ax88179_reset,
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ 	.stop	= ax88179_stop,
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX | FLAG_AVOID_UNLINK_URBS,
++ #else
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX,
++ #endif
++ 	.rx_fixup = ax88179_rx_fixup,
++ 	.tx_fixup = ax88179_tx_fixup,
++ };
++ 
++ static const struct driver_info lenovo_info = {
++ 	.description = "ThinkPad OneLinkDock USB GigaLAN",
++ 	.bind	= ax88179_bind,
++ 	.unbind	= ax88179_unbind,
++ 	.status	= ax88179_status,
++ 	.link_reset = ax88179_link_reset,
++ 	.reset	= ax88179_reset,
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ 	.stop	= ax88179_stop,
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX | FLAG_AVOID_UNLINK_URBS,
++ #else
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX,
++ #endif
++ 	.rx_fixup = ax88179_rx_fixup,
++ 	.tx_fixup = ax88179_tx_fixup,
++ };
++ 
++ static const struct driver_info toshiba_info = {
++ 	.description = "Toshiba USB 3.0 to Gigabit LAN Adapter",
++ 	.bind	= ax88179_bind,
++ 	.unbind	= ax88179_unbind,
++ 	.status	= ax88179_status,
++ 	.link_reset = ax88179_link_reset,
++ 	.reset	= ax88179_reset,
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ 	.stop	= ax88179_stop,
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX | FLAG_AVOID_UNLINK_URBS,
++ #else
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX,
++ #endif
++ 	.rx_fixup = ax88179_rx_fixup,
++ 	.tx_fixup = ax88179_tx_fixup,
++ };
++ 
++ static const struct driver_info samsung_info = {
++ 	.description = "Samsung USB Ethernet Adapter",
++ 	.bind	= ax88179_bind,
++ 	.unbind = ax88179_unbind,
++ 	.status = ax88179_status,
++ 	.link_reset = ax88179_link_reset,
++ 	.reset	= ax88179_reset,
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
++ 	.stop	= ax88179_stop,
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX | FLAG_AVOID_UNLINK_URBS,
++ #else
++ 	.flags	= FLAG_ETHER | FLAG_FRAMING_AX,
++ #endif
++ 	.rx_fixup = ax88179_rx_fixup,
++ 	.tx_fixup = ax88179_tx_fixup,
++ };
++ 
++ static const struct usb_device_id	products[] = {
++ {
++ 	/* ASIX AX88179 10/100/1000 */
++ 	USB_DEVICE(0x0b95, 0x1790),
++ 	.driver_info = (unsigned long) &ax88179_info,
++ }, {
++ 	/* ASIX AX88178A 10/100/1000 */
++ 	USB_DEVICE(0x0b95, 0x178a),
++ 	.driver_info = (unsigned long) &ax88178a_info,
++ }, {
++ 	/* Sitecom USB 3.0 to Gigabit Adapter */
++ 	USB_DEVICE(0x0df6, 0x0072),
++ 	.driver_info = (unsigned long) &sitecom_info,
++ }, {
++ 	/* ThinkPad OneLinkDock USB GigaLAN */
++ 	USB_DEVICE(0x17ef, 0x304b),
++ 	.driver_info = (unsigned long) &lenovo_info,
++ }, {
++ 	/* Toshiba USB3.0 to Gigabit LAN Adapter */
++ 	USB_DEVICE(0x0930, 0x0a13),
++ 	.driver_info = (unsigned long) &toshiba_info,
++ }, {
++ 	/* Samsung USB Ethernet Adapter */
++ 	USB_DEVICE(0x04e8, 0xa100),
++ 	.driver_info = (unsigned long) &samsung_info,
++ },
++ 	{ },		/* END */
++ };
++ MODULE_DEVICE_TABLE(usb, products);
++ 
++ static struct usb_driver asix_driver = {
++ 	.name =		"ax88179_178a",
++ 	.id_table =	products,
++ 	.probe =	usbnet_probe,
++ 	.suspend =	ax88179_suspend,
++ 	.resume =	ax88179_resume,
++ 	.disconnect =	usbnet_disconnect,
++ };
++ 
++ 
++ static int __init asix_init(void)
++ {
++ 	return usb_register(&asix_driver);
++ }
++ module_init(asix_init);
++ 
++ static void __exit asix_exit(void)
++ {
++ 	usb_deregister(&asix_driver);
++ }
++ module_exit(asix_exit);
++ 
++ MODULE_AUTHOR("David Hollis");
++ MODULE_DESCRIPTION("ASIX AX88179_178A based USB 2.0/3.0 Gigabit Ethernet Devices");
++ MODULE_LICENSE("GPL");
++ 
+diff -rcNP linux-sunxi.vanilla/drivers/net/usb/ax88179_178a.h linux-sunxi.patched/drivers/net/usb/ax88179_178a.h
+*** linux-sunxi.vanilla/drivers/net/usb/ax88179_178a.h	1970-01-01 01:00:00.000000000 +0100
+--- linux-sunxi.patched/drivers/net/usb/ax88179_178a.h	2013-12-13 09:34:03.000000000 +0000
+***************
+*** 0 ****
+--- 1,355 ----
++ #ifndef	__LINUX_USBNET_ASIX_H
++ #define	__LINUX_USBNET_ASIX_H
++ 
++ 
++ #define AX88179_PHY_ID			0x03
++ #define AX_MCAST_FILTER_SIZE		8
++ #define AX_MAX_MCAST			64
++ #define AX_EEPROM_LEN			0x40
++ #define AX_RX_CHECKSUM			1
++ #define AX_TX_CHECKSUM			2
++ 
++ #define AX_BULKIN_24K			0x18;	/* 24k */
++ 
++ #define AX_ACCESS_MAC			0x01
++ #define AX_ACCESS_PHY			0x02
++ #define AX_ACCESS_WAKEUP		0x03
++ #define AX_ACCESS_EEPROM		0x04
++ #define AX_ACCESS_EFUSE			0x05
++ #define AX_RELOAD_EEPROM_EFUSE		0x06
++ #define AX_WRITE_EFUSE_EN		0x09
++ #define AX_WRITE_EFUSE_DIS		0x0A
++ #define AX_ACCESS_MFAB			0x10
++ 
++ #define PHYSICAL_LINK_STATUS		0x02
++ 	#define	AX_USB_SS		0x04
++ 	#define	AX_USB_HS		0x02
++ 	#define	AX_USB_FS		0x01
++ 
++ #define GENERAL_STATUS			0x03
++ /* Check AX88179 version. UA1:Bit2 = 0,  UA2:Bit2 = 1 */
++ 	#define	AX_SECLD		0x04
++ 
++ 
++ 
++ #define AX_SROM_ADDR			0x07
++ #define AX_SROM_CMD			0x0a
++ 	#define EEP_RD			0x04	/* EEprom read command */
++ 	#define EEP_WR			0x08	/* EEprom write command */
++ 	#define EEP_BUSY		0x10	/* EEprom access module busy */
++ 
++ 
++ #define AX_SROM_DATA_LOW		0x08
++ #define AX_SROM_DATA_HIGH		0x09
++ 
++ #define AX_RX_CTL			0x0b
++ 	#define AX_RX_CTL_DROPCRCERR		0x0100 /* Drop CRC error packet */
++ 	#define AX_RX_CTL_IPE			0x0200 /* Enable IP header in receive buffer aligned on 32-bit aligment */
++ 	#define AX_RX_CTL_TXPADCRC		0x0400 /* checksum value in rx header 3 */
++ 	#define AX_RX_CTL_START			0x0080 /* Ethernet MAC start */
++ 	#define AX_RX_CTL_AP			0x0020 /* Accept physcial address from Multicast array */
++ 	#define AX_RX_CTL_AM			0x0010 /* Accetp Brocadcast frames*/
++ 	#define AX_RX_CTL_AB			0x0008 /* HW auto-added 8-bytes data when meet USB bulk in transfer boundary (1024/512/64)*/
++ 	#define AX_RX_CTL_HA8B			0x0004
++ 	#define AX_RX_CTL_AMALL			0x0002 /* Accetp all multicast frames */
++ 	#define AX_RX_CTL_PRO			0x0001 /* Promiscuous Mode */
++ 	#define AX_RX_CTL_STOP			0x0000 /* Stop MAC */
++ 
++ #define AX_NODE_ID			0x10
++ #define AX_MULTI_FILTER_ARRY		0x16
++ 
++ #define AX_MEDIUM_STATUS_MODE			0x22
++ 	#define AX_MEDIUM_GIGAMODE	0x01
++ 	#define AX_MEDIUM_FULL_DUPLEX	0x02
++ //	#define AX_MEDIUM_ALWAYS_ONE	0x04
++ 	#define AX_MEDIUM_EN_125MHZ	0x08
++ 	#define AX_MEDIUM_RXFLOW_CTRLEN	0x10
++ 	#define AX_MEDIUM_TXFLOW_CTRLEN	0x20
++ 	#define AX_MEDIUM_RECEIVE_EN	0x100
++ 	#define AX_MEDIUM_PS		0x200
++ 	#define AX_MEDIUM_JUMBO_EN	0x8040
++ 
++ #define AX_MONITOR_MODE			0x24
++ 	#define AX_MONITOR_MODE_RWLC		0x02
++ 	#define AX_MONITOR_MODE_RWMP		0x04
++ 	#define AX_MONITOR_MODE_RWWF		0x08
++ 	#define AX_MONITOR_MODE_RW_FLAG		0x10
++ 	#define AX_MONITOR_MODE_PMEPOL		0x20
++ 	#define AX_MONITOR_MODE_PMETYPE		0x40
++ 
++ #define AX_GPIO_CTRL			0x25
++ 	#define AX_GPIO_CTRL_GPIO3EN		0x80
++ 	#define AX_GPIO_CTRL_GPIO2EN		0x40
++ 	#define AX_GPIO_CTRL_GPIO1EN		0x20
++ 
++ #define AX_PHYPWR_RSTCTL		0x26
++ 	#define AX_PHYPWR_RSTCTL_BZ		0x0010
++ 	#define AX_PHYPWR_RSTCTL_IPRL		0x0020
++ 	#define AX_PHYPWR_RSTCTL_AUTODETACH	0x1000
++ 
++ #define AX_RX_BULKIN_QCTRL		0x2e
++ 	#define AX_RX_BULKIN_QCTRL_TIME		0x01
++ 	#define AX_RX_BULKIN_QCTRL_IFG		0x02
++ 	#define AX_RX_BULKIN_QCTRL_SIZE		0x04
++ 
++ #define AX_RX_BULKIN_QTIMR_LOW		0x2f
++ #define AX_RX_BULKIN_QTIMR_HIGH			0x30
++ #define AX_RX_BULKIN_QSIZE			0x31
++ #define AX_RX_BULKIN_QIFG			0x32
++ 
++ #define AX_CLK_SELECT			0x33
++ 	#define AX_CLK_SELECT_BCS		0x01
++ 	#define AX_CLK_SELECT_ACS		0x02
++ 	#define AX_CLK_SELECT_ACSREQ		0x10
++ 	#define AX_CLK_SELECT_ULR		0x08
++ 
++ #define AX_RXCOE_CTL			0x34
++ 	#define AX_RXCOE_IP			0x01
++ 	#define AX_RXCOE_TCP			0x02
++ 	#define AX_RXCOE_UDP			0x04
++ 	#define AX_RXCOE_ICMP			0x08
++ 	#define AX_RXCOE_IGMP			0x10
++ 	#define AX_RXCOE_TCPV6			0x20
++ 	#define AX_RXCOE_UDPV6			0x40
++ 	#define AX_RXCOE_ICMV6			0x80
++ 
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22)
++ 	#define AX_RXCOE_DEF_CSUM	(AX_RXCOE_IP	| AX_RXCOE_TCP  | \
++ 					 AX_RXCOE_UDP	| AX_RXCOE_ICMV6 | \
++ 					 AX_RXCOE_TCPV6	| AX_RXCOE_UDPV6)
++ #else
++ 	#define AX_RXCOE_DEF_CSUM	(AX_RXCOE_IP	| AX_RXCOE_TCP | \
++ 					 AX_RXCOE_UDP)
++ #endif
++ 
++ #define AX_TXCOE_CTL			0x35
++ 	#define AX_TXCOE_IP			0x01
++ 	#define AX_TXCOE_TCP			0x02
++ 	#define AX_TXCOE_UDP			0x04
++ 	#define AX_TXCOE_ICMP			0x08
++ 	#define AX_TXCOE_IGMP			0x10
++ 	#define AX_TXCOE_TCPV6			0x20
++ 	#define AX_TXCOE_UDPV6			0x40
++ 	#define AX_TXCOE_ICMV6			0x80
++ #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22)
++ 	#define AX_TXCOE_DEF_CSUM	(AX_TXCOE_TCP   | AX_TXCOE_UDP | \
++ 					 AX_TXCOE_TCPV6 | AX_TXCOE_UDPV6)
++ #else
++ 	#define AX_TXCOE_DEF_CSUM	(AX_TXCOE_TCP	| AX_TXCOE_UDP)
++ #endif
++ 
++ #define AX_PAUSE_WATERLVL_HIGH		0x54
++ #define AX_PAUSE_WATERLVL_LOW		0x55
++ 
++ 
++ #define AX_EEP_EFUSE_CORRECT		0x00
++ #define AX88179_EEPROM_MAGIC			0x17900b95
++ 
++ 
++ /*****************************************************************************/
++ /* GMII register definitions */
++ #define GMII_PHY_CONTROL			0x00	/* control reg */
++ 	/* Bit definitions: GMII Control */
++ 	#define GMII_CONTROL_RESET		0x8000	/* reset bit in control reg */
++ 	#define GMII_CONTROL_LOOPBACK		0x4000	/* loopback bit in control reg */
++ 	#define GMII_CONTROL_10MB		0x0000	/* 10 Mbit */
++ 	#define GMII_CONTROL_100MB		0x2000	/* 100Mbit */
++ 	#define GMII_CONTROL_1000MB		0x0040	/* 1000Mbit */
++ 	#define GMII_CONTROL_SPEED_BITS		0x2040	/* speed bit mask */
++ 	#define GMII_CONTROL_ENABLE_AUTO	0x1000	/* autonegotiate enable */
++ 	#define GMII_CONTROL_POWER_DOWN		0x0800
++ 	#define GMII_CONTROL_ISOLATE		0x0400	/* islolate bit */
++ 	#define GMII_CONTROL_START_AUTO		0x0200	/* restart autonegotiate */
++ 	#define GMII_CONTROL_FULL_DUPLEX	0x0100
++ 
++ #define GMII_PHY_STATUS				0x01	/* status reg */
++ 	/* Bit definitions: GMII Status */
++ 	#define GMII_STATUS_100MB_MASK		0xE000	/* any of these indicate 100 Mbit */
++ 	#define GMII_STATUS_10MB_MASK		0x1800	/* either of these indicate 10 Mbit */
++ 	#define GMII_STATUS_AUTO_DONE		0x0020	/* auto negotiation complete */
++ 	#define GMII_STATUS_AUTO		0x0008	/* auto negotiation is available */
++ 	#define GMII_STATUS_LINK_UP		0x0004	/* link status bit */
++ 	#define GMII_STATUS_EXTENDED		0x0001	/* extended regs exist */
++ 	#define GMII_STATUS_100T4		0x8000	/* capable of 100BT4 */
++ 	#define GMII_STATUS_100TXFD		0x4000	/* capable of 100BTX full duplex */
++ 	#define GMII_STATUS_100TX		0x2000	/* capable of 100BTX */
++ 	#define GMII_STATUS_10TFD		0x1000	/* capable of 10BT full duplex */
++ 	#define GMII_STATUS_10T			0x0800	/* capable of 10BT */
++ 
++ #define GMII_PHY_OUI				0x02	/* most of the OUI bits */
++ #define GMII_PHY_MODEL				0x03	/* model/rev bits, and rest of OUI */
++ #define GMII_PHY_ANAR				0x04	/* AN advertisement reg */
++ 	/* Bit definitions: Auto-Negotiation Advertisement */
++ 	#define GMII_ANAR_ASYM_PAUSE		0x0800	/* support asymetric pause */
++ 	#define GMII_ANAR_PAUSE			0x0400	/* support pause packets */
++ 	#define GMII_ANAR_100T4			0x0200	/* support 100BT4 */
++ 	#define GMII_ANAR_100TXFD		0x0100	/* support 100BTX full duplex */
++ 	#define GMII_ANAR_100TX			0x0080	/* support 100BTX half duplex */
++ 	#define GMII_ANAR_10TFD			0x0040	/* support 10BT full duplex */
++ 	#define GMII_ANAR_10T			0x0020	/* support 10BT half duplex */
++ 	#define GMII_SELECTOR_FIELD		0x001F	/* selector field. */
++ 
++ #define GMII_PHY_ANLPAR				0x05	/* AN Link Partner */
++ 	/* Bit definitions: Auto-Negotiation Link Partner Ability */
++ 	#define GMII_ANLPAR_100T4		0x0200	/* support 100BT4 */
++ 	#define GMII_ANLPAR_100TXFD		0x0100	/* support 100BTX full duplex */
++ 	#define GMII_ANLPAR_100TX		0x0080	/* support 100BTX half duplex */
++ 	#define GMII_ANLPAR_10TFD		0x0040	/* support 10BT full duplex */
++ 	#define GMII_ANLPAR_10T			0x0020	/* support 10BT half duplex */
++ 	#define GMII_ANLPAR_PAUSE		0x0400	/* support pause packets */
++ 	#define GMII_ANLPAR_ASYM_PAUSE		0x0800	/* support asymetric pause */
++ 	#define GMII_ANLPAR_ACK			0x4000	/* means LCB was successfully rx'd */
++ 	#define GMII_SELECTOR_8023		0x0001;
++ 
++ #define GMII_PHY_ANER				0x06	/* AN expansion reg */
++ #define GMII_PHY_1000BT_CONTROL			0x09	/* control reg for 1000BT */
++ #define GMII_PHY_1000BT_STATUS			0x0A	/* status reg for 1000BT */
++ 
++ #define GMII_PHY_PHYSR				0x11	/* PHY specific status register */
++ 	#define GMII_PHY_PHYSR_SMASK		0xc000
++ 	#define GMII_PHY_PHYSR_GIGA		0x8000
++ 	#define GMII_PHY_PHYSR_100		0x4000
++ 	#define GMII_PHY_PHYSR_FULL		0x2000
++ 	#define GMII_PHY_PHYSR_LINK		0x400
++ 
++ /* Bit definitions: 1000BaseT AUX Control */
++ #define GMII_1000_AUX_CTRL_MASTER_SLAVE		0x1000
++ #define GMII_1000_AUX_CTRL_FD_CAPABLE		0x0200	/* full duplex capable */
++ #define GMII_1000_AUX_CTRL_HD_CAPABLE		0x0100	/* half duplex capable */
++ 
++ /* Bit definitions: 1000BaseT AUX Status */
++ #define GMII_1000_AUX_STATUS_FD_CAPABLE		0x0800	/* full duplex capable */
++ #define GMII_1000_AUX_STATUS_HD_CAPABLE		0x0400	/* half duplex capable */
++ 
++ /*Cicada MII Registers */
++ #define GMII_AUX_CTRL_STATUS			0x1C
++ #define GMII_AUX_ANEG_CPLT			0x8000
++ #define GMII_AUX_FDX				0x0020
++ #define GMII_AUX_SPEED_1000			0x0010
++ #define GMII_AUX_SPEED_100			0x0008
++ 
++ #define GMII_LED_ACTIVE				0x1a
++ 	#define GMII_LED_ACTIVE_MASK		0xff8f
++ 	#define GMII_LED0_ACTIVE		(1 << 4)
++ 	#define GMII_LED1_ACTIVE		(1 << 5)
++ 	#define GMII_LED2_ACTIVE		(1 << 6)
++ 
++ #define GMII_LED_LINK				0x1c
++ 	#define GMII_LED_LINK_MASK		0xf888
++ 	#define GMII_LED0_LINK_10		(1 << 0)
++ 	#define GMII_LED0_LINK_100		(1 << 1)
++ 	#define GMII_LED0_LINK_1000		(1 << 2)
++ 	#define GMII_LED1_LINK_10		(1 << 4)
++ 	#define GMII_LED1_LINK_100		(1 << 5)
++ 	#define GMII_LED1_LINK_1000		(1 << 6)
++ 	#define GMII_LED2_LINK_10		(1 << 8)
++ 	#define GMII_LED2_LINK_100		(1 << 9)
++ 	#define GMII_LED2_LINK_1000		(1 << 10)
++ 
++ 	#define	LED_VALID	(1 << 15) /* UA2 LED Setting */
++ 
++ 	#define	LED0_ACTIVE	(1 << 0)
++ 	#define	LED0_LINK_10	(1 << 1)
++ 	#define	LED0_LINK_100	(1 << 2)
++ 	#define	LED0_LINK_1000	(1 << 3)
++ 	#define	LED0_FD		(1 << 4)
++ 	#define LED0_USB3_MASK	0x001f
++ 
++ 	#define	LED1_ACTIVE	(1 << 5)
++ 	#define	LED1_LINK_10	(1 << 6)
++ 	#define	LED1_LINK_100	(1 << 7)
++ 	#define	LED1_LINK_1000	(1 << 8)
++ 	#define	LED1_FD		(1 << 9)
++ 	#define LED1_USB3_MASK	0x03e0
++ 
++ 	#define	LED2_ACTIVE	(1 << 10)
++ 	#define	LED2_LINK_1000	(1 << 13)
++ 	#define	LED2_LINK_100	(1 << 12)
++ 	#define	LED2_LINK_10	(1 << 11)
++ 	#define	LED2_FD		(1 << 14)
++ 	#define LED2_USB3_MASK	0x7c00
++ 
++ #define GMII_PHYPAGE				0x1e
++ 
++ #define GMII_PHY_PAGE_SELECT			0x1f
++ 	#define GMII_PHY_PAGE_SELECT_EXT	0x0007
++ 	#define GMII_PHY_PAGE_SELECT_PAGE0	0X0000
++ 	#define GMII_PHY_PAGE_SELECT_PAGE1	0X0001
++ 	#define GMII_PHY_PAGE_SELECT_PAGE2	0X0002
++ 	#define GMII_PHY_PAGE_SELECT_PAGE3	0X0003
++ 	#define GMII_PHY_PAGE_SELECT_PAGE4	0X0004
++ 	#define GMII_PHY_PAGE_SELECT_PAGE5	0X0005
++ 	#define GMII_PHY_PAGE_SELECT_PAGE6	0X0006
++ 
++ /******************************************************************************/
++ 
++ struct ax88179_data {
++ 	u16 rxctl;
++ 	u8  checksum;
++ } __attribute__ ((packed));
++ 
++ struct ax88179_int_data {
++ 	__le16 res1;
++ #define AX_INT_PPLS_LINK	(1 << 0)
++ #define AX_INT_SPLS_LINK	(1 << 1)
++ #define AX_INT_CABOFF_UNPLUG	(1 << 7)
++ 	u8 link;
++ 	__le16 res2;
++ 	u8 status;
++ 	__le16 res3;
++ } __attribute__ ((packed));
++ 
++ #define AX_RXHDR_L4_ERR		(1 << 8)
++ #define AX_RXHDR_L3_ERR		(1 << 9)
++ 
++ 
++ #define AX_RXHDR_L4_TYPE_ICMP		2
++ #define AX_RXHDR_L4_TYPE_IGMP		3
++ #define AX_RXHDR_L4_TYPE_TCMPV6		5
++ 
++ #define AX_RXHDR_L3_TYPE_IP		1
++ #define AX_RXHDR_L3_TYPE_IPV6		2
++ 
++ #define AX_RXHDR_L4_TYPE_MASK			0x1c
++ #define AX_RXHDR_L4_TYPE_UDP			4
++ #define AX_RXHDR_L4_TYPE_TCP			16
++ #define AX_RXHDR_L3CSUM_ERR			2
++ #define AX_RXHDR_L4CSUM_ERR			1
++ #define AX_RXHDR_CRC_ERR			0x20000000
++ #define AX_RXHDR_MII_ERR			0x40000000
++ #define AX_RXHDR_DROP_ERR			0x80000000
++ #if 0
++ struct ax88179_rx_pkt_header {
++ 
++ 	u8	l4_csum_err:1,
++ 		l3_csum_err:1,
++ 		l4_type:3,
++ 		l3_type:2,
++ 		ce:1;
++ 
++ 	u8	vlan_ind:3,
++ 		rx_ok:1,
++ 		pri:3,
++ 		bmc:1;
++ 
++ 	u16	len:13,
++ 		crc:1,
++ 		mii:1,
++ 		drop:1;
++ 
++ } __attribute__ ((packed));
++ #endif
++ static struct {unsigned char ctrl, timer_l, timer_h, size, ifg; }
++ AX88179_BULKIN_SIZE[] =	{
++ 	{7, 0x4f, 0,	0x12, 0xff},
++ 	{7, 0x20, 3,	0x16, 0xff},
++ 	{7, 0xae, 7,	0x18, 0xff},
++ 	{7, 0xcc, 0x4c, 0x18, 8},
++ };
++ 
++ static int ax88179_reset(struct usbnet *dev);
++ static int ax88179_link_reset(struct usbnet *dev);
++ static int ax88179_AutoDetach(struct usbnet *dev, int in_pm);
++ 
++ #endif /* __LINUX_USBNET_ASIX_H */
++ 
+diff -ur linux-sunxi.vanilla/drivers/net/usb/Kconfig linux-sunxi.patched/drivers/net/usb/Kconfig
+--- linux-sunxi.vanilla/drivers/net/usb/Kconfig	2014-05-11 11:35:24.716577151 +0100
++++ linux-sunxi.patched/drivers/net/usb/Kconfig	2014-05-11 13:16:46.152122910 +0100
+@@ -157,6 +157,21 @@
+ 	  This driver creates an interface named "ethX", where X depends on
+ 	  what other networking devices you have in use.
+ 
++config USB_NET_AX88179
++        tristate "ASIX AX88179_178A Based USB 3.0/2.0 Gigabit Ethernet Adapters"
++        depends on USB_USBNET
++        select CRC32
++        default y
++        help
++          This option adds support for ASIX AX88179_178A based USB 3.0/2.0
++          10/100/1000 Ethernet adapters.
++
++          This driver should work with at least the following devices:
++            * ASIX AX88179
++
++          This driver creates an interface named "ethX", where X depends on
++          what other networking devices you have in use.
++
+ config USB_NET_QF9700
+ 	tristate "QF9700 Based USB 2.0 Ethernet Adapters"
+ 	depends on USB_USBNET
+diff -ur linux-sunxi.vanilla/drivers/net/usb/Makefile linux-sunxi.patched/drivers/net/usb/Makefile
+--- linux-sunxi.vanilla/drivers/net/usb/Makefile	2014-05-11 11:35:24.716577151 +0100
++++ linux-sunxi.patched/drivers/net/usb/Makefile	2014-05-11 13:16:46.156122909 +0100
+@@ -9,6 +9,7 @@
+ obj-$(CONFIG_USB_HSO)		+= hso.o
+ obj-$(CONFIG_USB_NET_AX8817X)	+= asix.o
+ obj-$(CONFIG_USB_NET_QF9700)	+= qf9700.o
++obj-$(CONFIG_USB_NET_AX88179)      += ax88179_178a.o 
+ obj-$(CONFIG_USB_NET_CDCETHER)	+= cdc_ether.o
+ obj-$(CONFIG_USB_NET_CDC_EEM)	+= cdc_eem.o
+ obj-$(CONFIG_USB_NET_DM9601)	+= dm9601.o
+diff -ur linux-sunxi.vanilla/drivers/power/axp_power/axp20-mfd.h linux-sunxi.patched/drivers/power/axp_power/axp20-mfd.h
+--- linux-sunxi.vanilla/drivers/power/axp_power/axp20-mfd.h	2014-05-11 11:35:25.496567346 +0100
++++ linux-sunxi.patched/drivers/power/axp_power/axp20-mfd.h	2014-05-11 10:32:29.000000000 +0100
+@@ -28,29 +28,89 @@
+ #include <linux/hwmon.h>
+ #include <linux/err.h>
+ 
+-static struct axp_mfd_chip *axp20_update_device(struct device *dev);
++static struct
++axp_mfd_chip *axp20_update_device(struct device *dev, int from_wq);
+ 
+ static ssize_t
+ show_temp(struct device *dev, struct device_attribute *devattr, char *buf)
+ {
+ 	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
+-	struct axp_mfd_chip *data = axp20_update_device(dev);
++	struct axp_mfd_chip *data = axp20_update_device(dev, 0);
+ 	if (attr->index == 1)
+ 		return sprintf(buf, "264800\n");
+ 	if (attr->index == 2)
+ 		return sprintf(buf, "-144700\n");
++	if (attr->index == 3)
++		return sprintf(buf, "AXP20X temperature\n");
+ 	return sprintf(buf, "%d\n", data->temperature * 100);
+ }
+ 
++static ssize_t
++show_acin_voltage(struct device *dev, struct device_attribute *devattr,
++		  char *buf)
++{
++	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
++	struct axp_mfd_chip *data = axp20_update_device(dev, 0);
++	if (attr->index == 3)
++		return sprintf(buf, "ACIN voltage\n");
++	if (attr->index == 4)
++		return sprintf(buf, "%d\n", data->acin_avg_voltage / 64);
++	return sprintf(buf, "%d\n", data->acin_voltage);
++}
++
++static ssize_t
++show_acin_current(struct device *dev, struct device_attribute *devattr,
++		  char *buf)
++{
++	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
++	struct axp_mfd_chip *data = axp20_update_device(dev, 0);
++	if (attr->index == 3)
++		return sprintf(buf, "ACIN current\n");
++	if (attr->index == 4)
++		return sprintf(buf, "%d\n", data->acin_avg_current / 64);
++	return sprintf(buf, "%d\n", data->acin_current);
++}
++
++static ssize_t
++show_acin_power(struct device *dev, struct device_attribute *devattr, char *buf)
++{
++	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
++	struct axp_mfd_chip *data = axp20_update_device(dev, 0);
++	if (attr->index == 3)
++		return sprintf(buf, "ACIN power\n");
++	if (attr->index == 4)
++		return sprintf(buf, "%d\n", data->acin_avg_power / 64);
++	return sprintf(buf, "%d\n", data->acin_power);
++}
+ 
+ static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, show_temp, NULL, 0);
+ static SENSOR_DEVICE_ATTR(temp1_max, S_IRUGO, show_temp, NULL, 1);
+ static SENSOR_DEVICE_ATTR(temp1_min, S_IRUGO, show_temp, NULL, 2);
++static SENSOR_DEVICE_ATTR(temp1_label, S_IRUGO, show_temp, NULL, 3);
++static SENSOR_DEVICE_ATTR(in0_input, S_IRUGO, show_acin_voltage, NULL, 0);
++static SENSOR_DEVICE_ATTR(in0_label, S_IRUGO, show_acin_voltage, NULL, 3);
++static SENSOR_DEVICE_ATTR(in0_average, S_IRUGO, show_acin_voltage, NULL, 4);
++static SENSOR_DEVICE_ATTR(curr1_input, S_IRUGO, show_acin_current, NULL, 0);
++static SENSOR_DEVICE_ATTR(curr1_label, S_IRUGO, show_acin_current, NULL, 3);
++static SENSOR_DEVICE_ATTR(curr1_average, S_IRUGO, show_acin_current, NULL, 4);
++static SENSOR_DEVICE_ATTR(power1_input, S_IRUGO, show_acin_power, NULL, 0);
++static SENSOR_DEVICE_ATTR(power1_label, S_IRUGO, show_acin_power, NULL, 3);
++static SENSOR_DEVICE_ATTR(power1_average, S_IRUGO, show_acin_power, NULL, 4);
+ 
+ static struct attribute *axp20_attributes[] = {
+ 	&sensor_dev_attr_temp1_input.dev_attr.attr,
+ 	&sensor_dev_attr_temp1_min.dev_attr.attr,
+ 	&sensor_dev_attr_temp1_max.dev_attr.attr,
++	&sensor_dev_attr_temp1_label.dev_attr.attr,
++	&sensor_dev_attr_in0_input.dev_attr.attr,
++	&sensor_dev_attr_in0_label.dev_attr.attr,
++	&sensor_dev_attr_in0_average.dev_attr.attr,
++	&sensor_dev_attr_curr1_input.dev_attr.attr,
++	&sensor_dev_attr_curr1_label.dev_attr.attr,
++	&sensor_dev_attr_curr1_average.dev_attr.attr,
++	&sensor_dev_attr_power1_input.dev_attr.attr,
++	&sensor_dev_attr_power1_label.dev_attr.attr,
++	&sensor_dev_attr_power1_average.dev_attr.attr,
+ 	NULL
+ };
+ 
+@@ -58,41 +118,101 @@
+ 	.attrs = axp20_attributes,
+ };
+ 
++static int axp_read_adc(struct device *dev, struct i2c_client *client, int reg)
++{
++	int err;
++	u8 high, low;
++
++	err = __axp_read(client, reg, &high);
++	if (err) {
++		dev_err(dev, "AXP Error while reading REG 0x%02X\n", reg);
++		high = 0;
++	}
++
++	err = __axp_read(client, reg + 1, &low);
++	if (err) {
++		dev_err(dev, "AXP Error while reading REG 0x%02X\n", reg + 1);
++		low = 0;
++	}
++
++	return (high << 4) + (low & 0x0F);
++}
++
++static int axp_hwmon_wq_counter;
++
++static void axp_hwmon_work_handler(struct work_struct *w);
++static struct workqueue_struct *wq;
++static DECLARE_DELAYED_WORK(axp_hwmon_work, axp_hwmon_work_handler);
++
++static struct device *wq_dev_arg;
++
++static void axp_hwmon_work_handler(struct work_struct *w)
++{
++	axp20_update_device(wq_dev_arg, 1);
++}
+ 
+ /*
+  *  * function that update the status of the chips (temperature)
+  *   */
+-static struct axp_mfd_chip *axp20_update_device(struct device *dev)
++static struct axp_mfd_chip *axp20_update_device(struct device *dev, int from_wq)
+ {
+ 	struct i2c_client *client = to_i2c_client(dev);
+ 	struct axp_mfd_chip *data = i2c_get_clientdata(client);
+-	int err;
+-	u8 high, low;
++	int adc_value;
+ 
+ 	mutex_lock(&data->lock);
+ 
+-	if (time_after(jiffies, data->last_updated + HZ * 2)
++	if (time_after(jiffies, data->last_updated + HZ / 50)
+ 		|| !data->valid) {
+-		dev_dbg(&client->dev, "Updating axp20 data\n");
++
++		/* AXP202 datasheet page 25, 0x000 means 0A,
++		 * 0xfff means 2.5594A, 4096 steps of 0.625mA */
++		adc_value = axp_read_adc(dev, client, 0x58);
++		data->acin_current = adc_value * 40960 >> 16;
++
++		/* AXP202 datasheet page 25, 0x000 means 0V,
++		 * 0xfff means 6.9615V, 4096 steps of 1.7mV */
++		adc_value = axp_read_adc(dev, client, 0x56);
++		data->acin_voltage = adc_value * 111411 >> 16;
++
+ 		/* AXP202 datasheet page 25, 0x000 means -144.7,
+ 		 * 0xfff means 264.8, 4096 steps of 0.1 degress */
+-		err = __axp_read(client, 0x5E, &high);
+-		if (err) {
+-			dev_err(dev, "AXP Error while reading high\n");
+-			high = 0;
+-		}
++		data->temperature = -1447 + axp_read_adc(dev, client, 0x5E);
++
++		data->acin_power = data->acin_voltage * data->acin_current;
++
++		if (!axp_hwmon_wq_counter || !data->valid) {
++			data->acin_avg_power = 0;
++			data->acin_avg_voltage = 0;
++			data->acin_avg_current = 0;
++		} else {
++			/* Calculate running moving average for N=64 */
++			data->acin_avg_power -= data->acin_avg_power / 64;
++			data->acin_avg_power += data->acin_voltage *
++						data->acin_current;
++
++			data->acin_avg_voltage -= data->acin_avg_voltage / 64;
++			data->acin_avg_voltage += data->acin_voltage;
+ 
+-		err = __axp_read(client, 0x5F, &low);
+-		if (err) {
+-			dev_err(dev, "AXP Error while reading low\n");
+-			low = 0;
++			data->acin_avg_current -= data->acin_avg_current / 64;
++			data->acin_avg_current += data->acin_current;
+ 		}
+ 
+-		data->temperature = -1447 + ((high << 4) + (low && 0x0F));
+ 		data->last_updated = jiffies;
+ 		data->valid = 1;
+ 	}
+ 
++	if (from_wq) {
++		if (axp_hwmon_wq_counter > 0) {
++			queue_delayed_work(wq, &axp_hwmon_work, HZ / 25);
++			axp_hwmon_wq_counter--;
++		}
++	} else {
++		/* Keep running for at least 1 minute from now */
++		axp_hwmon_wq_counter = 61 * 25;
++		queue_delayed_work(wq, &axp_hwmon_work, HZ / 25);
++	}
++
+ 	mutex_unlock(&data->lock);
+ 	return data;
+ }
+@@ -151,6 +271,8 @@
+ 			err = PTR_ERR(chip->hwmon_dev);
+ 			goto exit_remove_files;
+ 		}
++		wq_dev_arg = chip->dev;
++		wq = create_singlethread_workqueue("axp_hwmon_wq");
+ 	} else {
+ 		dev_info(chip->dev, "AXP internal temperature monitoring disabled\n");
+ 		/* TODO enable it ?*/
+@@ -502,4 +624,4 @@
+ 	AXP_MFD_ATTR(axp20_ovtemclsen),
+ 	AXP_MFD_ATTR(axp20_reg),
+ 	AXP_MFD_ATTR(axp20_regs),
+-};
++};
+\ No newline at end of file
+diff -ur linux-sunxi.vanilla/drivers/power/axp_power/axp-mfd.c linux-sunxi.patched/drivers/power/axp_power/axp-mfd.c
+--- linux-sunxi.vanilla/drivers/power/axp_power/axp-mfd.c	2014-05-11 11:35:25.496567346 +0100
++++ linux-sunxi.patched/drivers/power/axp_power/axp-mfd.c	2014-05-11 10:31:29.000000000 +0100
+@@ -365,6 +365,10 @@
+ 
+ #ifdef CONFIG_AXP_HWMON
+ 	if (chip->itm_enabled == 1) {
++		cancel_delayed_work(&axp_hwmon_work);
++		flush_workqueue(wq);
++		destroy_workqueue(wq);
++
+ 		hwmon_device_unregister(chip->hwmon_dev);
+ 		sysfs_remove_group(&client->dev.kobj, &axp20_group);
+ 	}
+@@ -399,4 +403,4 @@
+ 
+ MODULE_DESCRIPTION("PMIC MFD Driver for AXP");
+ MODULE_AUTHOR("Donglu Zhang Krosspower");
+-MODULE_LICENSE("GPL");
++MODULE_LICENSE("GPL");
+\ No newline at end of file
+diff -ur linux-sunxi.vanilla/drivers/tty/n_tty.c linux-sunxi.patched/drivers/tty/n_tty.c
+--- linux-sunxi.vanilla/drivers/tty/n_tty.c	2014-05-11 11:35:26.376556283 +0100
++++ linux-sunxi.patched/drivers/tty/n_tty.c	2014-05-13 20:53:50.835795432 +0100
+@@ -1995,8 +1995,10 @@
+ 			if (tty->ops->flush_chars)
+ 				tty->ops->flush_chars(tty);
+ 		} else {
+-			while (nr > 0) {
++		       	while (nr > 0) {
++			        mutex_lock(&tty->output_lock);
+ 				c = tty->ops->write(tty, b, nr);
++				mutex_unlock(&tty->output_lock);
+ 				if (c < 0) {
+ 					retval = c;
+ 					goto break_out;
+diff -ur linux-sunxi.vanilla/include/linux/mfd/axp-mfd.h linux-sunxi.patched/include/linux/mfd/axp-mfd.h
+--- linux-sunxi.vanilla/include/linux/mfd/axp-mfd.h	2014-05-11 11:35:27.716539437 +0100
++++ linux-sunxi.patched/include/linux/mfd/axp-mfd.h	2014-05-11 10:33:23.000000000 +0100
+@@ -133,6 +133,12 @@
+ 	struct blocking_notifier_head notifier_list;
+ #ifdef CONFIG_AXP_HWMON
+ 	s16 temperature; /* range from -1447 to 2648 */
++	s16 acin_voltage; /* range from 0 to 6962 mV */
++	s16 acin_current; /* range from 0 to 2559 mA */
++	s32 acin_power;
++	s32 acin_avg_voltage;
++	s32 acin_avg_current;
++	s32 acin_avg_power;
+ 	unsigned long last_updated;     /* in jiffies */
+ 	char valid;	/* zero until following fields are valid */
+ 	struct device *hwmon_dev;
+@@ -536,4 +542,4 @@
+ extern int axp_set_bits(struct device *dev, int reg, uint8_t bit_mask);
+ extern int axp_clr_bits(struct device *dev, int reg, uint8_t bit_mask);
+ extern struct i2c_client *axp;
+-#endif /* __LINUX_PMIC_AXP_H */
++#endif /* __LINUX_PMIC_AXP_H */
+\ No newline at end of file
+diff -ur linux-sunxi.vanilla/scripts/package/builddeb linux-sunxi.patched/scripts/package/builddeb
+--- linux-sunxi.vanilla/scripts/package/builddeb	2014-05-11 11:35:29.536516556 +0100
++++ linux-sunxi.patched/scripts/package/builddeb	2014-05-13 21:48:44.422369645 +0100
+@@ -43,7 +43,16 @@
+ 	mips*)
+ 		debarch=mips$(grep -q CPU_LITTLE_ENDIAN=y .config && echo el) ;;
+ 	arm*)
+-		debarch=arm$(grep -q CONFIG_AEABI=y .config && echo el) ;;
++		               if grep -q CONFIG_AEABI=y $KCONFIG_CONFIG; then
++                   if grep -q CONFIG_VFP=y $KCONFIG_CONFIG; then
++                       debarch=armhf
++                   else
++                       debarch=armel
++                   fi
++               else
++                   debarch=arm
++               fi
++               ;;
+ 	*)
+ 		echo "" >&2
+ 		echo "** ** **  WARNING  ** ** **" >&2
+@@ -116,7 +125,7 @@
+ 	if [ -e $KBUILD_IMAGE ]; then
+ 		cp $KBUILD_IMAGE "$tmpdir/boot/vmlinuz-$version"
+ 	else
+-		cp arch/$ARCH/boot/$KBUILD_IMAGE "$tmpdir/boot/vmlinuz-$version"
++		cp arch/$ARCH/boot/uImage "$tmpdir/boot/uImage-$version"
+ 	fi
+ fi
+ 
+@@ -155,6 +164,57 @@
+ 	chmod 755 "$tmpdir/DEBIAN/$script"
+ done
+ 
++cat <<EOF > "$tmpdir$debhookdir/postinst.d/updateBoot"
++#!/bin/sh
++# Usage updateBoot <KERNEL_VERSION>
++
++tmp_uenv=\$(mktemp /boot/uEnv.XXXXXX)
++  
++if [ -f /etc/armStrap.conf ]; then
++  . /etc/armStrap.conf
++fi
++
++if [ -f /boot/uEnv.cb2 ]; then
++touch /boot/uEnv.cb2
++rm -f /boot/uEnv.bak
++cp /boot/uEnv.cb2 /boot/uEnv.bak
++awk '/^kernel=/ { skip = 1; } /^dtb=/ { skip = 1; } /.*/ { if (skip) skip = 0; else print \$0; }' /boot/uEnv.cb2 > \${tmp_uenv}
++echo "kernel=/boot/uImage-\${1}" >> \${tmp_uenv}
++
++if [ -f /boot/\${uboot_kernel_dtb} ]; then
++  echo "dtb=\${uboot_kernel_dtb}" >> \${tmp_uenv}
++fi
++rm -f /boot/uEnv.cb2
++mv \${tmp_uenv} /boot/uEnv.cb2
++fi
++
++if [ -f /boot/uEnv.txt ]; then
++touch /boot/uEnv.txt
++rm -f /boot/uEnv.bak
++cp /boot/uEnv.txt /boot/uEnv.bak
++awk '/^kernel=/ { skip = 1; } /^dtb=/ { skip = 1; } /.*/ { if (skip) skip = 0; else print \$0; }' /boot/uEnv.txt > \${tmp_uenv}
++echo "kernel=/boot/uImage-\${1}" >> \${tmp_uenv}
++
++if [ -f /boot/\${uboot_kernel_dtb} ]; then
++  echo "dtb=\${uboot_kernel_dtb}" >> \${tmp_uenv}
++fi
++rm -f /boot/uEnv.txt
++mv \${tmp_uenv} /boot/uEnv.txt
++fi
++
++EOF
++
++cat <<EOF > "$tmpdir$debhookdir/prerm.d/cleanBoot"
++#!/bin/bash
++
++rm -f /etc/kernel/postinst.d/updateBoot
++rm -f /etc/kernel/prerm.d/cleanBoot
++
++EOF
++
++chmod 755 "$tmpdir$debhookdir/postinst.d/updateBoot"
++chmod 755 "$tmpdir$debhookdir/prerm.d/cleanBoot"
++
+ # Try to determine maintainer and email values
+ if [ -n "$DEBEMAIL" ]; then
+        email=$DEBEMAIL
+@@ -245,6 +305,10 @@
+ # Build header package
+ (cd $srctree; find . -name Makefile -o -name Kconfig\* -o -name \*.pl > "$objtree/debian/hdrsrcfiles")
+ (cd $srctree; find arch/$SRCARCH/include include scripts -type f >> "$objtree/debian/hdrsrcfiles")
++(cd $srctree; find arch/$SRCARCH/plat-sunxi -type f >> "$objtree/debian/hdrsrcfiles")
++if echo arch/$SRCARCH/mach-*/include | grep -v '*' >/dev/null; then
++	(cd $srctree; find arch/$SRCARCH/mach-*/include -type f >> "$objtree/debian/hdrsrcfiles")
++fi
+ (cd $objtree; find .config Module.symvers include scripts -type f >> "$objtree/debian/hdrobjfiles")
+ destdir=$kernel_headers_dir/usr/src/linux-headers-$version
+ mkdir -p "$destdir"
+@@ -252,6 +316,7 @@
+ (cd $objtree; tar -c -f - -T "$objtree/debian/hdrobjfiles") | (cd $destdir; tar -xf -)
+ ln -sf "/usr/src/linux-headers-$version" "$kernel_headers_dir/lib/modules/$version/build"
+ rm -f "$objtree/debian/hdrsrcfiles" "$objtree/debian/hdrobjfiles"
++arch=${DEB_HOST_ARCH}
+ 
+ cat <<EOF >> debian/control
+ 
+diff -ur linux-sunxi.vanilla/sound/soc/Kconfig linux-sunxi.patched/sound/soc/Kconfig
+--- linux-sunxi.vanilla/sound/soc/Kconfig	2014-05-11 11:35:29.756513791 +0100
++++ linux-sunxi.patched/sound/soc/Kconfig	2014-05-11 13:19:23.658145167 +0100
+@@ -60,7 +60,7 @@
+ source "sound/soc/sunxi/hdmiaudio/Kconfig"
+ source "sound/soc/sunxi/spdif/Kconfig"
+ # i2s needs various adjustments for sun7i
+-if ARCH_SUN4I || ARCH_SUN5I
++if ARCH_SUN4I || ARCH_SUN5I || ARCH_SUN7I
+ source "sound/soc/sunxi/i2s/Kconfig"
+ endif
+ endif
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/Kconfig linux-sunxi.patched/sound/soc/sunxi/i2s/Kconfig
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/Kconfig	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/Kconfig	2014-05-11 13:19:23.658145167 +0100
+@@ -1,5 +1,5 @@
+ config SND_SUNXI_SOC_I2S_INTERFACE
+-	tristate "SoC i2s interface for the AllWinner sun4i and sun5i chips"
++	tristate "SoC i2s interface for the AllWinner sun4i, sun5i and sun7i chips"
+ 	default m
+ 	help
+ 	  Say Y or M if you want to add support for codecs attached to
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sndi2s.c linux-sunxi.patched/sound/soc/sunxi/i2s/sndi2s.c
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sndi2s.c	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sndi2s.c	2014-05-11 13:19:23.658145167 +0100
+@@ -35,11 +35,23 @@
+ };
+ 
+ static int i2s_used = 0;
+-#define sndi2s_RATES  (SNDRV_PCM_RATE_8000_192000|SNDRV_PCM_RATE_KNOT)
++static int sunxi_i2s_slave = 0;
++
++#define sndi2s_RATES_MASTER  (SNDRV_PCM_RATE_8000_192000|SNDRV_PCM_RATE_KNOT)
++#define sndi2s_RATES_SLAVE (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |\
++				SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |\
++				SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000)
++
++#if defined CONFIG_ARCH_SUN7I
++#define sndi2s_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
++#else
+ #define sndi2s_FORMATS (SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_LE | \
+-		                     SNDRV_PCM_FMTBIT_S18_3LE | SNDRV_PCM_FMTBIT_S20_3LE)
++		                     SNDRV_PCM_FMTBIT_S18_3LE | SNDRV_PCM_FMTBIT_S20_LE)
++#endif
+ 
++/* cleaning code
+ hdmi_audio_t hdmi_parameter;
++*/
+ 
+ static int sndi2s_mute(struct snd_soc_dai *dai, int mute)
+ {
+@@ -62,8 +74,26 @@
+ 	struct snd_pcm_hw_params *params,
+ 	struct snd_soc_dai *dai)
+ {
++/*
++	switch (params_format(params)) 
++	{
++	case SNDRV_PCM_FORMAT_S16_LE:
++		printk("[IIS-0] sndi2s_hw_params: format 16 bit\n");
++		break;
++	case SNDRV_PCM_FORMAT_S20_3LE:
++		printk("[IIS-0] sndi2s_hw_params: format 20 bit in 3 bytes\n");
++		break;
++	case SNDRV_PCM_FORMAT_S24_LE:
++		printk("[IIS-0] sndi2s_hw_params: format 24 bit in 4 bytes\n");
++		break;
++	default:
++		printk("[IIS-0] sndi2s_hw_params: Unsupported format (%d)\n", (int)params_format(params));
++		//return -EINVAL;
++	}
++*/	
++/* cleaning code
+ 	hdmi_parameter.sample_rate = params_rate(params);
+-
++*/
+ 	return 0;
+ }
+ 
+@@ -75,15 +105,18 @@
+ 
+ static int sndi2s_set_dai_clkdiv(struct snd_soc_dai *codec_dai, int div_id, int div)
+ {
+-
++/* cleaning code
+ 	hdmi_parameter.fs_between = div;
+-
++*/
+ 	return 0;
+ }
+ 
+ static int sndi2s_set_dai_fmt(struct snd_soc_dai *codec_dai,
+ 			       unsigned int fmt)
+ {
++/*
++	printk("[IIS-0] sndi2s_set_dai_fmt: format (%u)\n", fmt);
++*/	
+ 	return 0;
+ }
+ 
+@@ -104,7 +137,7 @@
+ 		.stream_name = "Playback",
+ 		.channels_min = 1,
+ 		.channels_max = 2,
+-		.rates = sndi2s_RATES,
++		.rates = sndi2s_RATES_MASTER,
+ 		.formats = sndi2s_FORMATS,
+ 	},
+ 	/* pcm operations */
+@@ -129,10 +162,8 @@
+ /* power down chip */
+ static int sndi2s_soc_remove(struct snd_soc_codec *codec)
+ {
+-	struct sndhdmi_priv *sndi2s = snd_soc_codec_get_drvdata(codec);
+-
++	struct sndi2s_priv *sndi2s = snd_soc_codec_get_drvdata(codec);
+ 	kfree(sndi2s);
+-
+ 	return 0;
+ }
+ 
+@@ -143,6 +174,12 @@
+ 
+ static int __devinit sndi2s_codec_probe(struct platform_device *pdev)
+ {
++	if(sunxi_i2s_slave) {
++		sndi2s_dai.playback.rates = sndi2s_RATES_SLAVE;
++		printk("[I2S-0] sndi2s_codec_probe I2S used in slave mode\n");
++	}
++	else 
++		printk("[I2S-0] sndi2s_codec_probe I2S used in master mode\n");
+ 	return snd_soc_register_codec(&pdev->dev, &soc_codec_dev_sndi2s, &sndi2s_dai, 1);
+ }
+ 
+@@ -169,7 +206,7 @@
+ static int __init sndi2s_codec_init(void)
+ {
+ 	int err = 0;
+-	int ret = 0;
++	int ret = 0, i2s_slave = 0;
+ 
+ 	ret = script_parser_fetch("i2s_para","i2s_used", &i2s_used, sizeof(int));
+ 	if (ret) {
+@@ -177,6 +214,16 @@
+     }
+ 
+ 	if (i2s_used) {
++		ret = script_parser_fetch("i2s_para","i2s_slave", &i2s_slave, sizeof(int));
++		if(ret == 0 && i2s_slave == 1) {
++			sunxi_i2s_slave = 1;
++			printk("[I2S-0] sndi2s_codec_init I2S used in slave mode\n");
++		}
++		else {
++			sunxi_i2s_slave = 0;
++			printk("[I2S-0] sndi2s_codec_init I2S used in master mode\n");
++		}
++	
+ 		if((err = platform_device_register(&sndi2s_codec_device)) < 0)
+ 			return err;
+ 
+@@ -204,3 +251,4 @@
+ MODULE_AUTHOR("Zoltan Devai, Christian Pellegrin <chripell@evolware.org>");
+ MODULE_LICENSE("GPL");
+ MODULE_ALIAS("platform:sunxi-i2s-codec");
++
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sndi2s.h linux-sunxi.patched/sound/soc/sunxi/i2s/sndi2s.h
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sndi2s.h	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sndi2s.h	2014-05-11 13:19:23.658145167 +0100
+@@ -16,6 +16,8 @@
+ #ifndef SNDI2S_H_
+ #define SNDI2S_H_
+ 
++#if 0
++cleaning code
+ typedef struct hdmi_audio
+ {
+ 	__u8    hw_intf;        /* 0:iis  1:spdif 2:pcm */
+@@ -54,5 +56,6 @@
+ 		HDMI_CMD_AUDIO_ENABLE,
+ 		HDMI_CMD_GET_HPD_STATUS,
+ }__hdmi_cmd_t;
++#endif
+ 
+ #endif
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2s.c linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2s.c
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2s.c	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2s.c	2014-05-11 13:19:23.658145167 +0100
+@@ -58,13 +58,15 @@
+ };
+ 
+ 
+- struct sunxi_i2s_info sunxi_iis;
++/* most of fields of this structure is never initialized and useless !!!*/
++struct sunxi_i2s_info sunxi_iis;
+ static u32 i2s_handle = 0;
+- static struct clk *i2s_apbclk, *i2s_pll2clk, *i2s_pllx8, *i2s_moduleclk;
++static struct clk *i2s_apbclk, *i2s_pll2clk, *i2s_pllx8, *i2s_moduleclk;
+ 
+ void sunxi_snd_txctrl_i2s(struct snd_pcm_substream *substream, int on)
+ {
+ 	u32 reg_val;
++	/*printk("[I2S-0] sunxi_snd_txctrl_i2s\n");*/
+ 
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_TXCHSEL);
+ 	reg_val &= ~0x7;
+@@ -73,7 +75,7 @@
+ 
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_TXCHMAP);
+ 	reg_val = 0;
+-	if (sunxi_is_sun4i()) {
++	if (sunxi_is_sun4i() || sunxi_is_sun7i()) {
+ 		if(substream->runtime->channels == 1) {
+ 			reg_val = 0x76543200;
+ 		} else {
+@@ -89,7 +91,7 @@
+ 	writel(reg_val, sunxi_iis.regs + SUNXI_TXCHMAP);
+ 
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
+-	if (sunxi_is_sun4i()) {
++	if (sunxi_is_sun4i() || sunxi_is_sun7i()) {
+ 		reg_val &= ~SUNXI_IISCTL_SDO3EN;
+ 		reg_val &= ~SUNXI_IISCTL_SDO2EN;
+ 		reg_val &= ~SUNXI_IISCTL_SDO1EN;
+@@ -146,6 +148,8 @@
+ 
+ 		//Global Enable Digital Audio Interface
+ 		reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
++		if(sunxi_iis.slave)
++			reg_val |= SUNXI_IISCTL_MS; // 1: Slave!
+ 		reg_val |= SUNXI_IISCTL_GEN;
+ 		writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+@@ -170,7 +174,7 @@
+ void sunxi_snd_rxctrl_i2s(int on)
+ {
+ 	u32 reg_val;
+-
++	/*printk("[I2S-0] sunxi_snd_rxctrl_i2s\n");*/
+ 	//flush RX FIFO
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISFCTL);
+ 	reg_val |= SUNXI_IISFCTL_FRX;
+@@ -192,6 +196,8 @@
+ 
+ 		//Global Enable Digital Audio Interface
+ 		reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
++		if(sunxi_iis.slave)
++			reg_val |= SUNXI_IISCTL_MS; // 1: Slave!
+ 		reg_val |= SUNXI_IISCTL_GEN;
+ 		writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+@@ -201,7 +207,7 @@
+ 		reg_val &= ~SUNXI_IISCTL_RXEN;
+ 		writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+-		/* DISBALE dma DRQ mode */
++		/* DISABLE dma DRQ mode */
+ 		reg_val = readl(sunxi_iis.regs + SUNXI_IISINT);
+ 		reg_val &= ~SUNXI_IISINT_RXDRQEN;
+ 		writel(reg_val, sunxi_iis.regs + SUNXI_IISINT);
+@@ -213,11 +219,13 @@
+ 	}
+ }
+ 
++//not used
++/*
+ static inline int sunxi_snd_is_clkmaster(void)
+ {
+ 	return ((readl(sunxi_iis.regs + SUNXI_IISCTL) & SUNXI_IISCTL_MS) ? 0 : 1);
+ }
+-
++*/
+ static int sunxi_i2s_set_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
+ {
+ 	u32 reg_val;
+@@ -225,7 +233,7 @@
+ 
+ 	//SDO ON
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
+-	if (sunxi_is_sun4i()) {
++	if (sunxi_is_sun4i() || sunxi_is_sun7i()) {
+ 		reg_val |= (SUNXI_IISCTL_SDO0EN | SUNXI_IISCTL_SDO1EN |
+ 			    SUNXI_IISCTL_SDO2EN | SUNXI_IISCTL_SDO3EN);
+ 	} else {
+@@ -235,16 +243,31 @@
+ 
+ 	/* master or slave selection */
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
++	if(sunxi_iis.slave)
++	{
++		reg_val |= SUNXI_IISCTL_MS; // 1: Slave!
++		/*printk("[IIS-0] sunxi_i2s_set_fmt: set slave mode for I2S interface\n");*/
++	}
++	else
++	{
++		reg_val &= ~SUNXI_IISCTL_MS; // 0: Master!
++		/*printk("[IIS-0] sunxi_i2s_set_fmt: set master mode for I2S interface\n");*/
++	}
++/*
+ 	switch(fmt & SND_SOC_DAIFMT_MASTER_MASK){
+-		case SND_SOC_DAIFMT_CBM_CFM:   /* codec clk & frm master */
+-			reg_val |= SUNXI_IISCTL_MS;
+-			break;
+-		case SND_SOC_DAIFMT_CBS_CFS:   /* codec clk & frm slave */
+-			reg_val &= ~SUNXI_IISCTL_MS;
++		case SND_SOC_DAIFMT_CBS_CFS:   // codec clk & frm slave
++			reg_val |= SUNXI_IISCTL_MS; // 1: Slave!
++			printk("[IIS-0] sunxi_i2s_set_fmt: set slave mode for I2S interface\n");
++			break;
++		case SND_SOC_DAIFMT_CBM_CFM:   // codec clk & frm master
++			reg_val &= ~SUNXI_IISCTL_MS; // 0: Master!
++			printk("[IIS-0] sunxi_i2s_set_fmt: set master mode for I2S interface\n");
+ 			break;
+ 		default:
++			printk("[IIS-0] sunxi_i2s_set_fmt: not master or slave mode\n");
+ 			return -EINVAL;
+ 	}
++*/
+ 	writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+ 	/* pcm or i2s mode selection */
+@@ -255,24 +278,30 @@
+ 		case SND_SOC_DAIFMT_I2S:        /* I2S mode */
+ 			reg_val &= ~SUNXI_IISCTL_PCM;
+ 			reg_val1 |= SUNXI_IISFAT0_FMT_I2S;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: set I2S mode\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_RIGHT_J:    /* Right Justified mode */
+ 			reg_val &= ~SUNXI_IISCTL_PCM;
+ 			reg_val1 |= SUNXI_IISFAT0_FMT_RGT;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: set Right Justified mode\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_LEFT_J:     /* Left Justified mode */
+ 			reg_val &= ~SUNXI_IISCTL_PCM;
+ 			reg_val1 |= SUNXI_IISFAT0_FMT_LFT;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: set Left Justified mode\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_DSP_A:      /* L data msb after FRM LRC */
+ 			reg_val |= SUNXI_IISCTL_PCM;
+ 			reg_val1 &= ~SUNXI_IISFAT0_LRCP;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: set L data msb after FRM LRC mode\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_DSP_B:      /* L data msb during FRM LRC */
+ 			reg_val |= SUNXI_IISCTL_PCM;
+ 			reg_val1 |= SUNXI_IISFAT0_LRCP;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: set L data msb during FRM LRC mode\n");*/
+ 			break;
+ 		default:
++			printk("[IIS-0] sunxi_i2s_set_fmt: unknown mode\n");
+ 			return -EINVAL;
+ 	}
+ 	writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+@@ -284,25 +313,30 @@
+ 		case SND_SOC_DAIFMT_NB_NF:     /* normal bit clock + frame */
+ 			reg_val1 &= ~SUNXI_IISFAT0_LRCP;
+ 			reg_val1 &= ~SUNXI_IISFAT0_BCP;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: normal bit clock + frame\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_NB_IF:     /* normal bclk + inv frm */
+ 			reg_val1 |= SUNXI_IISFAT0_LRCP;
+ 			reg_val1 &= ~SUNXI_IISFAT0_BCP;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: normal bclk + inv frm\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_IB_NF:     /* invert bclk + nor frm */
+ 			reg_val1 &= ~SUNXI_IISFAT0_LRCP;
+ 			reg_val1 |= SUNXI_IISFAT0_BCP;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: invert bclk + nor frm\n");*/
+ 			break;
+ 		case SND_SOC_DAIFMT_IB_IF:     /* invert bclk + frm */
+ 			reg_val1 |= SUNXI_IISFAT0_LRCP;
+ 			reg_val1 |= SUNXI_IISFAT0_BCP;
++			/*printk("[IIS-0] sunxi_i2s_set_fmt: invert bclk + frm\n");*/
+ 			break;
+ 	}
+ 	writel(reg_val1, sunxi_iis.regs + SUNXI_IISFAT0);
+ 
+-	/* word select size */
++	/* clear word select size */
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISFAT0);
+ 	reg_val &= ~SUNXI_IISFAT0_WSS_32BCLK;
++	/*printk("[IIS-0] sunxi_i2s_set_fmt: word size = %d\n", sunxi_iis.ws_size);*/
+ 	if(sunxi_iis.ws_size == 16)
+ 		reg_val |= SUNXI_IISFAT0_WSS_16BCLK;
+ 	else if(sunxi_iis.ws_size == 20)
+@@ -318,9 +352,15 @@
+ 	reg_val |= sunxi_iis.pcm_rxtype<<2;
+ 
+ 	if(!sunxi_iis.pcm_sync_type)
++	{
+ 		reg_val |= SUNXI_IISFAT1_SSYNC;							//short sync
++		/*printk("[IIS-0] sunxi_i2s_set_fmt: set pcm_sync_type = short sync\n");*/
++	}
+ 	if(sunxi_iis.pcm_sw == 16)
++	{
+ 		reg_val |= SUNXI_IISFAT1_SW;
++		/*printk("[IIS-0] sunxi_i2s_set_fmt: pcm_sw == 16\n");*/
++	}
+ 
+ 	reg_val |=((sunxi_iis.pcm_start_slot - 1)&0x3)<<6;		//start slot index
+ 
+@@ -349,6 +389,7 @@
+ 																struct snd_pcm_hw_params *params,
+ 																struct snd_soc_dai *dai)
+ {
++	u32 reg_val;
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+ 	struct sunxi_dma_params *dma_data;
+ 
+@@ -358,6 +399,31 @@
+ 	else
+ 		dma_data = &sunxi_i2s_pcm_stereo_in;
+ 
++	/* set format info */
++	reg_val = readl(sunxi_iis.regs + SUNXI_IISFAT0);
++	/* clear sample resolution select size */
++	reg_val &= ~SUNXI_IISFAT0_SR_RVD;
++
++	switch (params_format(params)) 
++	{
++	case SNDRV_PCM_FORMAT_S16_LE:
++		reg_val |= SUNXI_IISFAT0_SR_16BIT;
++		/*printk("[IIS-0] sunxi_i2s_hw_params: format 16 bit\n");*/
++		break;
++	case SNDRV_PCM_FORMAT_S20_3LE:
++		reg_val |= SUNXI_IISFAT0_SR_20BIT;
++		/*printk("[IIS-0] sunxi_i2s_hw_params: format 20 bit\n");*/
++		break;
++	case SNDRV_PCM_FORMAT_S24_LE:
++		reg_val |= SUNXI_IISFAT0_SR_24BIT;
++		/*printk("[IIS-0] sunxi_i2s_hw_params: format 24 bit\n");*/
++		break;
++	default:
++		printk("[IIS-0] sunxi_i2s_hw_params: Unsupported format (%d)\n", (int)params_format(params));
++		//return -EINVAL;
++	}
++	writel(reg_val, sunxi_iis.regs + SUNXI_IISFAT0);
++
+ 	snd_soc_dai_set_dma_data(rtd->cpu_dai, substream, dma_data);
+ 	return 0;
+ }
+@@ -403,9 +469,17 @@
+                                  unsigned int freq, int dir)
+ {
+ 	if (!freq) {
+-		clk_set_rate(i2s_pll2clk, 24576000);
++		/*printk("[IIS-0] sunxi_i2s_set_sysclk: set sysclk=24576000\n");*/
++		if(sunxi_iis.slave)
++			gpio_write_one_pin_value(i2s_handle, 0, "i2s_clk_sel");
++		else
++			clk_set_rate(i2s_pll2clk, 24576000);
+ 	} else {
+-		clk_set_rate(i2s_pll2clk, 22579200);
++		/*printk("[IIS-0] sunxi_i2s_set_sysclk: set sysclk=22579200\n");*/
++		if(sunxi_iis.slave)
++			gpio_write_one_pin_value(i2s_handle, 1, "i2s_clk_sel");
++		else
++			clk_set_rate(i2s_pll2clk, 22579200);
+ 	}
+ 
+ 	return 0;
+@@ -414,6 +488,27 @@
+ static int sunxi_i2s_set_clkdiv(struct snd_soc_dai *cpu_dai, int div_id, int div)
+ {
+ 	u32 reg;
++	/*printk("[IIS-0] sunxi_i2s_set_clkdiv: PLL clock div_id=(%s), div=(%d)\n", 
++		div_id == SUNXI_DIV_MCLK ? "SUNXI_DIV_MCLK" : 
++		(div_id == SUNXI_DIV_BCLK ? "SUNXI_DIV_BCLK" : "SUNXI_DIV_EXTCLK"), div);*/
++
++
++	if(sunxi_iis.slave) {
++		if(div_id != SUNXI_DIV_EXTCLK) {
++			pr_err("[I2S-0] try to set external clock divider failed\n");
++			return -EINVAL;
++		}
++		/*printk("[IIS-0] sunxi_i2s_set_clkdiv: external clock, div=(%d)\n", div);*/
++	}
++	else {
++		if(div_id != SUNXI_DIV_MCLK && div_id != SUNXI_DIV_BCLK) {
++			pr_err("[I2S-0] try to set PLL clock divider failed\n");
++			return -EINVAL;
++		}
++		/*printk("[IIS-0] sunxi_i2s_set_clkdiv: PLL clock div_id=(%s), div=(%d)\n", 
++			div_id == SUNXI_DIV_MCLK ? "SUNXI_DIV_MCLK" : "SUNXI_DIV_BCLK", div);*/
++	}
++
+ 	switch (div_id) {
+ 		case SUNXI_DIV_MCLK:
+ 			if(div <= 8)
+@@ -447,18 +542,39 @@
+ 			reg = (readl(sunxi_iis.regs + SUNXI_IISCLKD) & ~SUNXI_IISCLKD_BCLK_MASK) | (div <<SUNXI_IISCLKD_BCLK_OFFS);
+ 			writel(reg, sunxi_iis.regs + SUNXI_IISCLKD);
+ 			break;
++		case SUNXI_DIV_EXTCLK:
++			/*printk("[IIS-0] sunxi_i2s_set_clkdiv set divider=(%d)\n", div);*/
++			if(div == 512) {
++				gpio_write_one_pin_value(i2s_handle, 1, "i2s_clk_div1");
++				gpio_write_one_pin_value(i2s_handle, 1, "i2s_clk_div0");
++			}
++			else if(div == 256) {
++				gpio_write_one_pin_value(i2s_handle, 0, "i2s_clk_div1");
++				gpio_write_one_pin_value(i2s_handle, 1, "i2s_clk_div0");
++			}
++			else if(div == 128) {
++				gpio_write_one_pin_value(i2s_handle, 0, "i2s_clk_div1");
++				gpio_write_one_pin_value(i2s_handle, 0, "i2s_clk_div0");
++			}
++			else {
++				pr_err("[I2S-0] try to set unsupported external clock divider div=(%d)\n", div);
++				return -EINVAL;
++			}
++			break;
+ 		default:
+ 			return -EINVAL;
+ 	}
+ 
+-	//diable MCLK output when high samplerate
++	//disable MCLK output when high samplerate or slave mode
+ 	reg = readl(sunxi_iis.regs + SUNXI_IISCLKD);
+-	if (!(reg & 0xF)) {
++	if (!(reg & 0xF) || sunxi_iis.slave) {
+ 		reg &= ~SUNXI_IISCLKD_MCLKOEN;
+ 		writel(reg, sunxi_iis.regs + SUNXI_IISCLKD);
++		/*printk("[IIS-0] sunxi_i2s_set_clkdiv: disable MCLK\n");*/
+ 	} else {
+ 		reg |= SUNXI_IISCLKD_MCLKOEN;
+ 		writel(reg, sunxi_iis.regs + SUNXI_IISCLKD);
++		/*printk("[IIS-0] sunxi_i2s_set_clkdiv: enable MCLK\n");*/
+ 	}
+ 
+ 	return 0;
+@@ -502,16 +618,17 @@
+ 	u32 reg_val;
+ 	printk("[IIS]Entered %s\n", __func__);
+ 
+-	//Global Enable Digital Audio Interface
++	//Global Disable Digital Audio Interface
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
+ 	reg_val &= ~SUNXI_IISCTL_GEN;
+ 	writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+ 	iisregsave();
+ 
+-	//release the module clock
+-	clk_disable(i2s_moduleclk);
+-
++	if(!sunxi_iis.slave) {
++		//release the module clock, only for master mode
++		clk_disable(i2s_moduleclk);
++	}
+ 	clk_disable(i2s_apbclk);
+ 
+ 	//printk("[IIS]PLL2 0x01c20008 = %#x\n", *(volatile int*)0xF1C20008);
+@@ -525,16 +642,21 @@
+ 	u32 reg_val;
+ 	printk("[IIS]Entered %s\n", __func__);
+ 
+-	//release the module clock
++	//enable the module clock
+ 	clk_enable(i2s_apbclk);
+ 
+-	//release the module clock
+-	clk_enable(i2s_moduleclk);
++	if(!sunxi_iis.slave) {
++
++		//enable the module clock
++		clk_enable(i2s_moduleclk);
++	}
+ 
+ 	iisregrestore();
+ 
+ 	//Global Enable Digital Audio Interface
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
++	if(sunxi_iis.slave)
++		reg_val |= SUNXI_IISCTL_MS; // 1: Slave!
+ 	reg_val |= SUNXI_IISCTL_GEN;
+ 	writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+@@ -545,7 +667,10 @@
+ 	return 0;
+ }
+ 
+-#define SUNXI_I2S_RATES (SNDRV_PCM_RATE_8000_192000 | SNDRV_PCM_RATE_KNOT)
++#define SUNXI_I2S_RATES_MASTER (SNDRV_PCM_RATE_8000_192000 | SNDRV_PCM_RATE_KNOT)
++#define SUNXI_I2S_RATES_SLAVE (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |\
++				SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |\
++				SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000)
+ static struct snd_soc_dai_ops sunxi_iis_dai_ops = {
+ 	.trigger 	= sunxi_i2s_trigger,
+ 	.hw_params 	= sunxi_i2s_hw_params,
+@@ -562,14 +687,14 @@
+ 	.playback 	= {
+ 		.channels_min = 1,
+ 		.channels_max = 2,
+-		.rates = SUNXI_I2S_RATES,
+-		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S24_LE,
++		.rates = SUNXI_I2S_RATES_MASTER,
++		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
+ 	},
+ 	.capture 	= {
+ 		.channels_min = 1,
+ 		.channels_max = 2,
+-		.rates = SUNXI_I2S_RATES,
+-		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S24_LE,
++		.rates = SUNXI_I2S_RATES_MASTER,
++		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
+ 	},
+ 	.symmetric_rates = 1,
+ 	.ops 		= &sunxi_iis_dai_ops,
+@@ -579,42 +704,60 @@
+ {
+ 	int reg_val = 0;
+ 	int ret;
++	printk("[IIS]Entered %s\n", __func__);
+ 
+ 	sunxi_iis.regs = ioremap(SUNXI_IISBASE, 0x100);
+ 	if (sunxi_iis.regs == NULL)
+ 		return -ENXIO;
+ 
+ 	//i2s apbclk
+-	i2s_apbclk = clk_get(NULL, "apb_i2s");
++	i2s_apbclk = clk_get(NULL, 
++#if defined CONFIG_ARCH_SUN7I
++		"apb_i2s0"
++#else
++		"apb_i2s"
++#endif
++		);
++
+ 	if(-1 == clk_enable(i2s_apbclk)){
+ 		printk("i2s_apbclk failed! line = %d\n", __LINE__);
+ 		goto out;
+ 	}
+ 
+-	i2s_pllx8 = clk_get(NULL, "audio_pllx8");
+-
+-	//i2s pll2clk
+-	i2s_pll2clk = clk_get(NULL, "audio_pll");
++	if(!sunxi_iis.slave) {
+ 
+-	//i2s module clk
+-	i2s_moduleclk = clk_get(NULL, "i2s");
+-
+-	if(clk_set_parent(i2s_moduleclk, i2s_pll2clk)){
+-		printk("try to set parent of i2s_moduleclk to i2s_pll2ck failed! line = %d\n",__LINE__);
+-		goto out1;
+-	}
++		i2s_pllx8 = clk_get(NULL, "audio_pllx8");
++		//i2s pll2clk
++		i2s_pll2clk = clk_get(NULL, "audio_pll");
++		//i2s module clk
++		i2s_moduleclk = clk_get(NULL, 
++#if defined CONFIG_ARCH_SUN7I
++			"i2s0"
++#else
++			"i2s"
++#endif
++			);
++
++		if(clk_set_parent(i2s_moduleclk, i2s_pll2clk)){
++			printk("try to set parent of i2s_moduleclk to i2s_pll2ck failed! line = %d\n",__LINE__);
++			goto out1;
++		}
+ 
+-	if(clk_set_rate(i2s_moduleclk, 24576000/8)){
+-		printk("set i2s_moduleclk clock freq to 24576000 failed! line = %d\n", __LINE__);
+-		goto out1;
+-	}
++		if(clk_set_rate(i2s_moduleclk, 24576000/8)){
++			printk("set i2s_moduleclk clock freq to 24576000 failed! line = %d\n", __LINE__);
++			goto out1;
++		}
+ 
+-	if(-1 == clk_enable(i2s_moduleclk)){
+-		printk("open i2s_moduleclk failed! line = %d\n", __LINE__);
+-		goto out1;
+-	}
++		if(-1 == clk_enable(i2s_moduleclk)){
++			printk("open i2s_moduleclk failed! line = %d\n", __LINE__);
++			goto out1;
++		}
++	} else
++		sunxi_iis_dai.playback.rates = SUNXI_I2S_RATES_SLAVE;
+ 
+ 	reg_val = readl(sunxi_iis.regs + SUNXI_IISCTL);
++	if(sunxi_iis.slave)
++		reg_val |= SUNXI_IISCTL_MS; // 1: Slave!
+ 	reg_val |= SUNXI_IISCTL_GEN;
+ 	writel(reg_val, sunxi_iis.regs + SUNXI_IISCTL);
+ 
+@@ -627,7 +770,8 @@
+ 
+ 	goto out;
+ 	out2:
+-		clk_disable(i2s_moduleclk);
++		if(!sunxi_iis.slave)
++			clk_disable(i2s_moduleclk);
+ 	out1:
+ 		clk_disable(i2s_apbclk);
+ 	out:
+@@ -636,17 +780,20 @@
+ 
+ static int __devexit sunxi_i2s_dev_remove(struct platform_device *pdev)
+ {
++	printk("[IIS]Entered %s\n", __func__);
++
+ 	if(i2s_used) {
+ 		i2s_used = 0;
+-		//release the module clock
+-		clk_disable(i2s_moduleclk);
++		if(!sunxi_iis.slave) {
++			//release the module clock
++			clk_disable(i2s_moduleclk);
+ 
+-		//release pllx8clk
+-		clk_put(i2s_pllx8);
+-
+-		//release pll2clk
+-		clk_put(i2s_pll2clk);
++			//release pllx8clk
++			clk_put(i2s_pllx8);
+ 
++			//release pll2clk
++			clk_put(i2s_pll2clk);
++		}
+ 		//release apbclk
+ 		clk_put(i2s_apbclk);
+ 
+@@ -674,15 +821,26 @@
+ 
+ static int __init sunxi_i2s_init(void)
+ {
+-	int err = 0;
++	int err = 0, i2s_slave = 0;
+ 	int ret;
+ 
++	printk("[IIS]Entered %s\n", __func__);
++
+ 	ret = script_parser_fetch("i2s_para","i2s_used", &i2s_used, sizeof(int));
+ 	if (ret) {
+-        printk("[I2S]sunxi_i2s_init fetch i2s using configuration failed\n");
+-    }
++        	printk("[I2S]sunxi_i2s_init fetch i2s using configuration failed\n");
++	}
+ 
+  	if (i2s_used) {
++		ret = script_parser_fetch("i2s_para","i2s_slave", &i2s_slave, sizeof(int));
++		if (ret == 0 && i2s_slave) {
++			sunxi_iis.slave = 1;
++			printk("[I2S-0] sunxi_i2s_init I2S used in slave mode\n");
++		} else {
++			sunxi_iis.slave = 0;
++			printk("[I2S-0] sunxi_i2s_init I2S used in master mode\n");
++		}
++
+ 		i2s_handle = gpio_request_ex("i2s_para", NULL);
+ 
+ 		if((err = platform_device_register(&sunxi_i2s_device)) < 0)
+@@ -700,6 +858,7 @@
+ 
+ static void __exit sunxi_i2s_exit(void)
+ {
++	printk("[IIS]Entered %s\n", __func__);
+ 	platform_driver_unregister(&sunxi_i2s_driver);
+ }
+ module_exit(sunxi_i2s_exit);
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2sdma.c linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2sdma.c
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2sdma.c	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2sdma.c	2014-05-11 13:19:23.658145167 +0100
+@@ -35,11 +35,15 @@
+ static volatile unsigned int dmasrc = 0;
+ static volatile unsigned int dmadst = 0;
+ 
++//DMA data width
++static unsigned int dma_width = 16;
++
++
+ static const struct snd_pcm_hardware sunxi_pcm_hardware = {
+ 	.info			= SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
+ 				      SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
+ 				      SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME,
+-	.formats		= SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S24_LE,
++	.formats		= SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
+ 	.rates			= SNDRV_PCM_RATE_8000_192000 | SNDRV_PCM_RATE_KNOT,
+ 	.rate_min		= 8000,
+ 	.rate_max		= 192000,
+@@ -125,6 +129,20 @@
+ 	if (!dma)
+ 		return 0;
+ 
++	/* set DMA width for using in sunxi_pcm_prepare*/
++	switch(params_format(params)) {
++		case SNDRV_PCM_FORMAT_S16_LE:
++		dma_width = 16;
++		break;
++		case SNDRV_PCM_FORMAT_S20_3LE:
++		dma_width = 32;
++		break;
++		case SNDRV_PCM_FORMAT_S24_LE:
++		dma_width = 32;
++		break;
++	}
++	/*printk("[IIS-0] sunxi_pcm_hw_params: dma width %d bit\n", dma_width);*/
++
+ 	if (prtd->params == NULL) {
+ 		prtd->params = dma;
+ 		ret = sunxi_dma_request(prtd->params, 0);
+@@ -196,10 +214,22 @@
+ #else
+ 		dma_config_t codec_dma_conf;
+ 		memset(&codec_dma_conf, 0, sizeof(codec_dma_conf));
+-		codec_dma_conf.xfer_type.src_data_width	= DATA_WIDTH_16BIT;
++
++		/*printk("[IIS-0] sunxi_pcm_prepare: DMA data width=(%d)\n", dma_width);*/
++		if(dma_width > 16)
++		{
++			codec_dma_conf.xfer_type.src_data_width	= DATA_WIDTH_32BIT;
++			codec_dma_conf.xfer_type.dst_data_width	= DATA_WIDTH_32BIT;
++		}
++		else
++		{
++			codec_dma_conf.xfer_type.src_data_width	= DATA_WIDTH_16BIT;
++			codec_dma_conf.xfer_type.dst_data_width	= DATA_WIDTH_16BIT;
++		}
+ 		codec_dma_conf.xfer_type.src_bst_len	= DATA_BRST_1;	
+-		codec_dma_conf.xfer_type.dst_data_width	= DATA_WIDTH_16BIT;
++//		codec_dma_conf.xfer_type.src_bst_len	= DATA_BRST_4;	/*like SPDIF module?*/
+ 		codec_dma_conf.xfer_type.dst_bst_len	= DATA_BRST_1;
++//		codec_dma_conf.xfer_type.src_bst_len	= DATA_BRST_4;	/*like SPDIF module?*/
+ 		codec_dma_conf.address_type.src_addr_mode = NDMA_ADDR_INCREMENT;
+ 		codec_dma_conf.address_type.dst_addr_mode = NDMA_ADDR_NOCHANGE;
+ 		codec_dma_conf.src_drq_type		= N_SRC_SDRAM;
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2sdma.h linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2sdma.h
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2sdma.h	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2sdma.h	2014-05-11 13:19:23.658145167 +0100
+@@ -29,7 +29,7 @@
+ };
+ 
+ /* platform data */
+-extern struct snd_soc_platform sunxi_soc_platform_i2s;
+-extern struct sunxi_i2s_info sunxi_iis;
++//extern struct snd_soc_platform sunxi_soc_platform_i2s;
++//extern struct sunxi_i2s_info sunxi_iis;
+ 
+ #endif //SUNXI_PCM_H_
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2s.h linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2s.h
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-i2s.h	2014-05-11 11:35:29.884512183 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-i2s.h	2014-05-11 13:19:23.658145167 +0100
+@@ -259,8 +259,9 @@
+ 
+ /*------------------------------------------------------------*/
+ /* Clock dividers */
+-#define SUNXI_DIV_MCLK	0
+-#define SUNXI_DIV_BCLK	1
++#define SUNXI_DIV_MCLK		0
++#define SUNXI_DIV_BCLK		1
++#define SUNXI_DIV_EXTCLK	2
+ 
+ #define SUNXI_IISCLKD_MCLK_MASK   0x0f
+ #define SUNXI_IISCLKD_MCLK_OFFS   0
+@@ -269,7 +270,7 @@
+ #define SUNXI_IISCLKD_MCLKEN_OFFS 7
+ 
+ unsigned int sunxi_i2s_get_clockrate(void);
+-extern struct sunxi_i2s_info sunxi_i2s;
++//extern struct sunxi_i2s_info sunxi_iis;
+ //extern struct snd_soc_dai sunxi_iis_dai;
+ 
+ extern void sunxi_snd_txctrl_i2s(struct snd_pcm_substream *substream, int on);
+@@ -300,5 +301,5 @@
+ 
+ };
+ 
+-extern struct sunxi_i2s_info sunxi_i2s;
++//extern struct sunxi_i2s_info sunxi_iis;
+ #endif
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-sndi2s.c linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-sndi2s.c
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-sndi2s.c	2014-05-11 11:35:29.888512132 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-sndi2s.c	2014-05-11 13:19:23.658145167 +0100
+@@ -29,9 +29,14 @@
+ 
+ #include "sndi2s.h"
+ 
++/* cleaning code
+ static struct clk *xtal;
+ static int clk_users;
+ static DEFINE_MUTEX(clk_lock);
++*/
++
++/* slave mode flag*/
++static int sunxi_i2s_slave = 0;
+ 
+ #ifdef ENFORCE_RATES
+ static struct snd_pcm_hw_constraint_list hw_constraints_rates = {
+@@ -62,6 +67,7 @@
+ 
+ static void sunxi_sndi2s_shutdown(struct snd_pcm_substream *substream)
+ {
++/* cleaning code
+ 	mutex_lock(&clk_lock);
+ 	clk_users -= 1;
+ 	if (clk_users == 0) {
+@@ -70,6 +76,7 @@
+ 
+ 	}
+ 	mutex_unlock(&clk_lock);
++*/
+ }
+ 
+ typedef struct __MCLK_SET_INF
+@@ -91,6 +98,14 @@
+ 
+ } __bclk_set_inf;
+ 
++typedef struct __EXTCLK_SET_INF
++{
++    __u32       samp_rate;      // sample rate
++    __u16       clk_div;        // masterclock division
++    __u16       mpll;           // select mpll, 0 - 24.576 Mhz, 1 - 22.5792 Mhz
++
++} __extclk_set_inf;
++
+ 
+ static __bclk_set_inf BCLK_INF[] =
+ {
+@@ -164,7 +179,45 @@
+     {0xffffffff, 0, 0, 0},
+ };
+ 
+-static s32 get_clock_divder(u32 sample_rate, u32 sample_width, u32 * mclk_div, u32* mpll, u32* bclk_div, u32* mult_fs)
++static __extclk_set_inf  EXTCLK_INF[] =
++{
++    //44.1k bitrate
++    { 44100, 512,  1},
++    //48k bitrate
++    { 48000, 512,  0},
++    //88.2k bitrate
++    { 88200, 256,  1},
++    //96k bitrate
++    { 96000, 256,  0},
++    //176.4k bitrate
++    { 176400, 128,  1},
++    //192k bitrate
++    { 192000, 128,  0},
++
++    //end flag 0xffffffff
++    {0xffffffff, 0, 0}
++};
++
++
++static s32 get_clock_divder_slave(u32 sample_rate, u32 sample_width, u32* bclk_div, u32* mpll, u32* mult_fs)
++{
++	u32 i, ret = -EINVAL;
++
++	for(i=0; i< 100; i++) {
++		if(EXTCLK_INF[i].samp_rate == sample_rate) {
++			//set mpll and bclk division
++			*mpll = EXTCLK_INF[i].mpll;
++			*bclk_div = EXTCLK_INF[i].clk_div;
++			ret = 0;
++			break;
++		}
++		else if(EXTCLK_INF[i].samp_rate == 0xffffffff)
++			break;
++	}
++	return ret;
++}
++
++static s32 get_clock_divder_master(u32 sample_rate, u32 sample_width, u32 * mclk_div, u32* mpll, u32* bclk_div, u32* mult_fs)
+ {
+ 	u32 i, j, ret = -EINVAL;
+ 
+@@ -200,35 +253,77 @@
+ 	int ret = 0;
+ 	unsigned long rate = params_rate(params);
+ 	u32 mclk_div=0, mpll=0, bclk_div=0, mult_fs=0;
++/*
++	printk("[IIS-0] sunxi_sndi2s_hw_params: codec_dai=(%s), cpu_dai=(%s)\n", codec_dai->name, cpu_dai->name);
++	printk("[IIS-0] sunxi_sndi2s_hw_params: channel num=(%d)\n", params_channels(params));
++	printk("[IIS-0] sunxi_sndi2s_hw_params: sample rate=(%lu)\n", rate);
++
++	switch (params_format(params)) 
++	{
++	case SNDRV_PCM_FORMAT_S16_LE:
++		printk("[IIS-0] sunxi_sndi2s_hw_params: format 16 bit\n");
++		break;
++	case SNDRV_PCM_FORMAT_S20_3LE:
++		printk("[IIS-0] sunxi_sndi2s_hw_params: format 20 bit in 3 bytes\n");
++		break;
++	case SNDRV_PCM_FORMAT_S24_LE:
++		printk("[IIS-0] sunxi_sndi2s_hw_params: format 24 bit in 4 bytes\n");
++		break;
++	default:
++		printk("[IIS-0] sunxi_sndi2s_hw_params: Unsupported format (%d)\n", (int)params_format(params));
++		//return -EINVAL;
++	}
++*/
++	if(!sunxi_i2s_slave) {
++		get_clock_divder_master(rate, 32, &mclk_div, &mpll, &bclk_div, &mult_fs);
++		printk("[IIS-0] get_clock_divder_master: rate=(%lu), mclk_div=(%d), mpll=(%d), bclk_div=(%d), mult_fs=(%d)\n", 
++			rate, mclk_div, mpll, bclk_div, mult_fs);
++	} else {
++		get_clock_divder_slave(rate, 32, &bclk_div, &mpll, &mult_fs);
++		printk("[IIS-0] get_clock_divder_slave: rate=(%lu), bclk_div=(%d), mpll=(%d), mult_fs=(%d)\n",
++			rate, bclk_div, mpll, mult_fs);
++	}
+ 
+-	get_clock_divder(rate, 32, &mclk_div, &mpll, &bclk_div, &mult_fs);
+-
++	//call sunxi_iis_set_fmt
+ 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
+-			SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
++			SND_SOC_DAIFMT_NB_NF/* | SND_SOC_DAIFMT_CBM_CFM*/);
+ 	if (ret < 0)
+ 		return ret;
+ 
++	//call sunxi_iis_set_fmt
+ 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
+-			SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
++			SND_SOC_DAIFMT_NB_NF/* | SND_SOC_DAIFMT_CBM_CFM*/);
+ 	if (ret < 0)
+ 		return ret;
+ 
++	//call sunxi_iis_set_sysclk
+ 	ret = snd_soc_dai_set_sysclk(cpu_dai, 0 , mpll, 0);
+ 	if (ret < 0)
+ 		return ret;
+ 
++	//call sndi2s_set_dai_sysclk
+ 	ret = snd_soc_dai_set_sysclk(codec_dai, 0 , mpll, 0);
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	ret = snd_soc_dai_set_clkdiv(cpu_dai, SUNXI_DIV_MCLK, mclk_div);
+-	if (ret < 0)
+-		return ret;
++	if(!sunxi_i2s_slave) {
++		//call sunxi_iis_set_clkdiv	
++		ret = snd_soc_dai_set_clkdiv(cpu_dai, SUNXI_DIV_MCLK, mclk_div);
++		if (ret < 0)
++			return ret;
+ 
+-	ret = snd_soc_dai_set_clkdiv(cpu_dai, SUNXI_DIV_BCLK, bclk_div);
+-	if (ret < 0)
+-		return ret;
++		//call sunxi_iis_set_clkdiv	
++		ret = snd_soc_dai_set_clkdiv(cpu_dai, SUNXI_DIV_BCLK, bclk_div);
++		if (ret < 0)
++			return ret;
++	} else {
++		//call sunxi_iis_set_clkdiv	
++		ret = snd_soc_dai_set_clkdiv(cpu_dai, SUNXI_DIV_EXTCLK, bclk_div);
++		if (ret < 0)
++			return ret;
++	}
+ 
++	//call sndi2s_set_dai_clkdiv
+ 	ret = snd_soc_dai_set_clkdiv(codec_dai, 0, mult_fs);
+ 	if (ret < 0)
+ 		return ret;
+@@ -243,7 +338,7 @@
+ };
+ 
+ static struct snd_soc_dai_link sunxi_sndi2s_dai_link = {
+-	.name 			= "I2S",
++	.name 		= "I2S",
+ 	.stream_name 	= "SUNXI-I2S",
+ 	.cpu_dai_name 	= "sunxi-i2s.0",
+ 	.codec_dai_name = "sndi2s",
+@@ -286,12 +381,26 @@
+ 
+ static int __init sunxi_sndi2s_init(void)
+ {
+-	int ret, i2s_used = 0;
++	int ret, i2s_used = 0, i2s_slave = 0;
++
++	printk("[IIS]Entered %s\n", __func__);
+ 
+ 	ret = script_parser_fetch("i2s_para", "i2s_used", &i2s_used, 1);
+ 	if (ret != 0 || !i2s_used)
+ 		return -ENODEV;
+ 
++	script_parser_fetch("i2s_para","i2s_slave", &i2s_slave, sizeof(int));
++	if (i2s_slave)
++	{
++		sunxi_i2s_slave = 1;
++		printk("[I2S-0] sunxi_sndi2s_init I2S used in slave mode\n");
++	}
++	else
++	{
++		sunxi_i2s_slave = 0;
++		printk("[I2S-0] sunxi_sndi2s_init I2S used in master mode\n");
++	}
++
+ 	ret = platform_device_register(&sunxi_sndi2s_device);
+ 	if (ret < 0)
+ 		return ret;
+diff -ur linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-sndi2s.h linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-sndi2s.h
+--- linux-sunxi.vanilla/sound/soc/sunxi/i2s/sunxi-sndi2s.h	2014-05-11 11:35:29.888512132 +0100
++++ linux-sunxi.patched/sound/soc/sunxi/i2s/sunxi-sndi2s.h	2014-05-11 13:19:23.658145167 +0100
+@@ -14,7 +14,7 @@
+  */
+ #ifndef SUNXI_SNDI2S_H_
+ #define SUNXI_SNDI2S_H_
+-
++/* cleaning code
+ struct sunxi_sndi2s_platform_data {
+ 	int iis_bclk;
+ 	int iis_ws;
+@@ -22,4 +22,5 @@
+ 	void (*power)(int);
+ 	int model;
+ }
++*/
+ #endif
