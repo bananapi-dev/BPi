@@ -1,7 +1,7 @@
 =====How To Build Banana Pi Image=====
 
-This document is for the developers who want to build their own BPi image with required sources and detail procedure.
-This will enable BananaPi developers reproduce the BPi image and hopfully contribute their other add-on drivers and apps for BPi.
+This document is for the developers who want to build their own BPi image.
+Add-on drivers and apps git pull requests are welcome.
 
 =====Procedures=====
 
