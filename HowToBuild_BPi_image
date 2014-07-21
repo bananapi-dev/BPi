@@ -1,0 +1,76 @@
+=====How To Build Banana Pi Image=====
+
+This document is for the developers who want to build their own BPi images to get related source and certain steps to do.
+Then the BananaPi developers can start from those source and modify with their wonderful ideas for fantastic applications on Banana Pi.
+
+=====Procedures=====
+
+1. Setup the working space.
+  $ export WORKSPACE=`pwd`
+  
+2. Get the GitHub source code from sunxi-bsp source.
+  $ git clone https://github.com/bananapi-dev/sunxi-bsp
+  
+3. Change the directory to sunxi-bsp.
+  $ cd sunxi-bsp
+  
+4. Set the environment.
+  $ source bpi_env.sh
+
+5. Update and complie the source code of Banana Pi.
+  Need to configure cubietruck as a starting example because we can not find Bananapi project at the first time.
+  $ ./configure cubietruck
+  $ make update
+  
+  Start to configure Bananapi and then complie!
+  $ ./configure Bananapi
+  $ make update
+  $ make
+  
+6. Download the rootfs package you preferred (such as Ubuntu/Lubuntu/Respbian...etc.), extract to $WORKSPACE
+  $ cd $WORKSPACE
+  $ wget https://releases.linaro.org/12.11/ubuntu/precise-images/ubuntu-desktop/linaro-precise-ubuntu-desktop-20121124-560.tar.gz
+  $ mkdir ROOTFS_DIR
+  $ sudo tar --strip-components=3 -pzxvf linaro-precise-ubuntu-desktop-20121124-560.tar.gz -C ROOTFS_DIR
+  
+7. Copy related files to the directory ROOTFS_DIR
+  $ sudo cp sunxi-bsp/build/Bananapi_hwpack/kernel/script.bin ROOTFS_DIR/boot
+  $ sudo cp sunxi-bsp/build/Bananapi_hwpack/kernel/uImage ROOTFS_DIR/boot
+  $ sudo gedit ROOTFS_DIR/boot/uEnv.txt
+  
+  Add text as below
+      mmcboot=fatload mmc 0 0x43000000 script.bin || fatload mmc 0 0x43000000 evb.bin; \
+      fatload mmc 0 0x48000000 uImage; if fatload mmc 0 0x43100000 uInitrd; \
+      then bootm 0x48000000 0x43100000; else bootm 0x48000000; fi
+      uenvcmd=run mmcboot
+      bootargs=console=ttyS0,115200 console=tty0 \
+      disp.screen0_output_mode=EDID:1280x720p60 \
+      hdmi.audio=EDID:0 root=/dev/mmcblk0p1
+      
+  $ sudo cp -r sunxi-bsp/build/Bananapi_hwpack/rootfs/* ROOTFS_DIR
+  $ sudo gedit ROOTFS_DIR/etc/network/interface
+  
+  Add text as below
+      auto eth0
+      iface eth0 inet dhcp
+      
+  $ sudo vi ROOTFS_DIR/etc/NetworkManager/NetworkManager.conf
+  Modify it as below
+      [ifupdown]
+      managed=true
+      
+8. Format the sdcard (assume the sdcard mount path is /dev/sdb) // Recommend to use 8G/Class 10 sdcard for better BPi experience
+  $ sudo umount /dev/sdb1
+  $ sudo dd if=/dev/zero of=/dev/sdb bs=1k count=1024
+  $ sudo dd if=sunxi-bsp/build/Bananapi_hwpack/bootloader/u-boot-sunxi-with-spl.bin of=/dev/sdb bs=1024 seek=8
+  $ sudo fdisk /dev/sdb
+  Create a partition
+  $ sudo mkfs.ext4 /dev/sdb1
+  
+9. Copy ROOTFS_DIR into sdcard
+  $ mkdir mnt
+  $ sudo mount /dev/sdb1 mnt
+  $ sudo cp -a ROOTFS_DIR/* mnt
+  $ sudo sync
+  
+=====End=====
