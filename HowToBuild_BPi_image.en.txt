@@ -1,7 +1,7 @@
 =====How To Build Banana Pi Image=====
 
 This document is for the developers who want to build their own BPi image.
-Add-on drivers and apps git pull requests are welcome.
+Git pull requests with your contribution or correction are welcome.
 
 =====Procedures=====
 
@@ -20,6 +20,24 @@ Add-on drivers and apps git pull requests are welcome.
 4. Set the environment.
 
   $ source bpi_env.sh
+
+	[bpi@psp sunxi-bsp]$ source bpi_env.sh 
+	Submodule 'allwinner-tools' (https://github.com/linux-sunxi/allwinner-tools.git) registered for path 'allwinner-tools'
+	Submodule 'cedarx-libs' (https://github.com/linux-sunxi/cedarx-libs.git) registered for path 'cedarx-libs'
+	Submodule 'linux-sunxi' (https://github.com/bananapi-dev/linux-sunxi.git) registered for path 'linux-sunxi'
+	Submodule 'sunxi-boards' (https://github.com/bananapi-dev/sunxi-boards.git) registered for path 'sunxi-boards'
+	Submodule 'sunxi-tools' (https://github.com/linux-sunxi/sunxi-tools.git) registered for path 'sunxi-tools'
+	Submodule 'u-boot-sunxi' (https://github.com/bananapi-dev/u-boot-sunxi.git) registered for path 'u-boot-sunxi'
+	Initialized empty Git repository in /local/home/bpi/github.com/sunxi-bsp/sunxi-boards/.git/
+	remote: Reusing existing pack: 1028, done.        
+	remote: Counting objects: 9, done.        
+	remote: Compressing objects: 100% (9/9), done.        
+	remote: Total 1037 (delta 4), reused 0 (delta 0)        
+	Receiving objects: 100% (1037/1037), 268.50 KiB | 23 KiB/s, done.
+	Resolving deltas: 100% (624/624), done.
+	Submodule path 'sunxi-boards': checked out 'c36a1c2186b4e9e9afc6a06713a0e67aa552a370'
+	cubietruck configured. Now run `make`
+	[bpi@psp sunxi-bsp]$ 
 
 5. Update and complie the source code of Banana Pi.
    Need to configure cubietruck as a starting example because we can not find Bananapi project at the first time.
