@@ -544,7 +544,7 @@ cleansrc:
 cleanbuildsrc:
 	${SUDO} rm -rf ${BUILD_DIR}/* ${SB_DB}/* ${VARDIST}
 gitpush:
-	($(GIT) commit -a -m "makefile update at ${TS} " )
+	($(GIT) commit -a -m "Lazy 'make gitpush' update on  ${TS} " )
 	( $(GIT) push origin master )
 
 hgpush:
