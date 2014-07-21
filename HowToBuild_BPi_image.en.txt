@@ -45,7 +45,7 @@ Git pull requests with your contribution or correction are welcome.
   $ ./configure cubietruck
   $ make update
   
-  Start to configure Bananapi and then complie!
+  Start to configure Bananapi and then compile!
 
   $ ./configure Bananapi
   $ make update
