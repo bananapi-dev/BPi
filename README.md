@@ -4,7 +4,7 @@ We are a team of enthusiasts with experience in embedded linux softwareware.
 
 Stand on the shoulder of RPi(Raspberry Pi*), we enhance RPi with more hardware capabilities. 
 
-We call it Banana Pi.
+We call it Banana Pi.  Banana Pi targets to be a cheap, small and flexible enough computer for daily life.  Built with ARM Cortex-A7 Dual-core CPU, Mali400MP2 GPU and 1GB DDR3 RAM, and loading proper software, Banana Pi can serve as a platform to make lots of applications for different purposes. 
 
 With removable SD card, Banana Pi can boot up with your favorite OS such as Lubuntu, Raspbien, Archlinux, openSUSE and Android.
 
