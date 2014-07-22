@@ -52,6 +52,7 @@ Git pull requests with your contribution or correction are welcome.
   $ make
   
 6. Download the rootfs package you prefer (such as Ubuntu/Lubuntu/Respbian...etc.), extract to $WORKSPACE
+   List Ubuntu as an example here.
 
   $ cd $WORKSPACE
   $ wget https://releases.linaro.org/12.11/ubuntu/precise-images/ubuntu-desktop/linaro-precise-ubuntu-desktop-20121124-560.tar.gz
