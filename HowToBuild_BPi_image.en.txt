@@ -39,7 +39,7 @@ Git pull requests with your contribution or correction are welcome.
 	cubietruck configured. Now run `make`
 	[bpi@psp sunxi-bsp]$ 
 
-5. Update and complie the source code of Banana Pi.
+5. Update and compile the source code of Banana Pi.
    Need to configure cubietruck as a starting example because we can not find Bananapi project at the first time.
 
   $ ./configure cubietruck
