@@ -19,7 +19,8 @@ Git pull requests with your contribution or correction are welcome.
   
 4. Set the environment.
 
-  $ source bpi_env.sh
+  $ source bpi_env.sh 
+
 
 	[bpi@psp sunxi-bsp]$ source bpi_env.sh 
 	Submodule 'allwinner-tools' (https://github.com/linux-sunxi/allwinner-tools.git) registered for path 'allwinner-tools'
@@ -46,11 +47,10 @@ Git pull requests with your contribution or correction are welcome.
   $ make update
   
   Start to configure Bananapi and then compile!
-
+  $ sudo apt-get install -y libusb-1.0-0-dev
   $ ./configure Bananapi
   $ make update
   $ make
-  
 6. Download the rootfs package you prefer (such as Ubuntu/Lubuntu/Respbian...etc.), extract to $WORKSPACE
    List Ubuntu as an example here.
 
