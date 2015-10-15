@@ -1,6 +1,6 @@
 BPi (Banana Pi)
 ===
-We are a team of enthusiasts with experience in embedded linux softwareware.
+We are a team of enthusiasts with experience in embedded linux software.
 
 Stand on the shoulder of RPi(Raspberry Pi*), we enhance RPi with more hardware capabilities. 
 
